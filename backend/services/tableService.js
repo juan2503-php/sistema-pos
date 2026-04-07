@@ -1,10 +1,9 @@
 // ============================================
-// Servicio de Mesas
+// Servicio de Mesas (Hardened)
 // ============================================
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { getIO } = require('../sockets');
-
-const prisma = new PrismaClient();
+const logger = require('../lib/logger');
 
 const getAll = async () => {
   return prisma.table.findMany({
@@ -48,20 +47,19 @@ const create = async (data) => {
 };
 
 const update = async (id, data) => {
+  // Whitelist de campos
   const updateData = {};
-  if (data.number) updateData.number = parseInt(data.number);
-  if (data.capacity) updateData.capacity = parseInt(data.capacity);
-  if (data.status) updateData.status = data.status;
+  if (data.number !== undefined) updateData.number = parseInt(data.number);
+  if (data.capacity !== undefined) updateData.capacity = parseInt(data.capacity);
+  if (data.status !== undefined) updateData.status = data.status;
 
   const table = await prisma.table.update({
     where: { id },
     data: updateData,
   });
 
-  // Emitir evento en tiempo real
   try {
-    const io = getIO();
-    io.emit('table:updated', table);
+    getIO().emit('table:updated', table);
   } catch (e) { /* socket no listo */ }
 
   return table;
@@ -78,8 +76,7 @@ const updateStatus = async (id, status) => {
   });
 
   try {
-    const io = getIO();
-    io.emit('table:updated', table);
+    getIO().emit('table:updated', table);
   } catch (e) { /* socket no listo */ }
 
   return table;

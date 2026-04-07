@@ -1,11 +1,10 @@
 // ============================================
-// Servicio de Órdenes
+// Servicio de Órdenes (Hardened)
+// Eventos estandarizados: order:created, order:updated
 // ============================================
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { getIO } = require('../sockets');
-const inventoryService = require('./inventoryService');
-
-const prisma = new PrismaClient();
+const logger = require('../lib/logger');
 
 /**
  * Obtener todas las órdenes con filtros opcionales
@@ -101,7 +100,7 @@ const create = async (data, userId) => {
 
     // Descontar inventario
     for (const item of orderItems) {
-      const updatedProduct = await tx.product.update({
+      await tx.product.update({
         where: { id: item.productId },
         data: { stock: { decrement: item.quantity } },
       });
@@ -119,12 +118,14 @@ const create = async (data, userId) => {
     return newOrder;
   });
 
-  // Emitir eventos en tiempo real
+  // Emitir eventos en tiempo real (estandarizados)
   try {
     const io = getIO();
     io.emit('order:created', order);
     io.emit('table:updated', { id: parseInt(tableId), status: 'OCCUPIED' });
   } catch (e) { /* socket no listo */ }
+
+  logger.info('Order created', { orderId: order.id, tableId, userId });
 
   return order;
 };
@@ -144,8 +145,7 @@ const updateStatus = async (id, status) => {
   });
 
   try {
-    const io = getIO();
-    io.emit('order:updated', order);
+    getIO().emit('order:updated', order);
   } catch (e) { /* socket no listo */ }
 
   return order;
@@ -182,9 +182,10 @@ const cancel = async (id) => {
   });
 
   try {
-    const io = getIO();
-    io.emit('order:updated', { id, status: 'CANCELLED' });
+    getIO().emit('order:updated', { id, status: 'CANCELLED' });
   } catch (e) { /* socket no listo */ }
+
+  logger.info('Order cancelled', { orderId: id });
 
   return { message: 'Orden cancelada y stock restaurado' };
 };
@@ -215,7 +216,7 @@ const update = async (id, data, userId) => {
     if (!product) throw { status: 404, message: `Producto ${item.productId} no encontrado` };
     if (!product.active) throw { status: 400, message: `Producto "${product.name}" inactivo` };
 
-    // Determinar la diferencia de stock (si el item ya existía, considerar el stock que ya ocupaba)
+    // Determinar la diferencia de stock
     const existingItem = existingOrder.items.find(i => i.productId === product.id);
     const existingQuantity = existingItem ? existingItem.quantity : 0;
     const difference = parseInt(item.quantity) - existingQuantity;
@@ -276,7 +277,7 @@ const update = async (id, data, userId) => {
 
     // 4. Descontar stock de los nuevos items reales
     for (const newItem of newOrderItems) {
-      const updatedProduct = await tx.product.update({
+      await tx.product.update({
         where: { id: newItem.productId },
         data: { stock: { decrement: newItem.quantity } },
       });
@@ -292,6 +293,12 @@ const update = async (id, data, userId) => {
 
     return newOrder;
   });
+
+  try {
+    getIO().emit('order:updated', updatedOrder);
+  } catch (e) { /* socket no listo */ }
+
+  logger.info('Order updated', { orderId: id, userId });
 
   return updatedOrder;
 };

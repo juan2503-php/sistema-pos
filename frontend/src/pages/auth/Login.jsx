@@ -19,7 +19,7 @@ export default function Login() {
 
     try {
       const { data } = await api.post('/auth/login', { email, password });
-      login(data.user, data.token);
+      login(data.user, data.token, data.refreshToken);
       
       toast.success(`Bienvenido, ${data.user.name}`);
       
@@ -95,11 +95,13 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-8 text-center text-sm text-neutral-500">
-            <p>Demo accounts:</p>
-            <p>Admin: admin@pos.com / admin123</p>
-            <p>Mesero: mesero@pos.com / mesero123</p>
-          </div>
+          {import.meta.env.DEV && (
+            <div className="mt-8 text-center text-sm text-neutral-500">
+              <p>Demo (solo desarrollo):</p>
+              <p>Admin: admin@pos.com / Admin2026!Secure</p>
+              <p>Mesero: mesero@pos.com / Mesero2026!Secure</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

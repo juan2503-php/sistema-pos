@@ -1,10 +1,10 @@
 // ============================================
-// Servicio de Pagos
+// Servicio de Pagos (Hardened)
+// Eventos estandarizados: order:updated, table:updated
 // ============================================
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { getIO } = require('../sockets');
-
-const prisma = new PrismaClient();
+const logger = require('../lib/logger');
 
 /**
  * Crear un pago para una orden
@@ -35,8 +35,10 @@ const create = async (data) => {
     });
 
     const newTotalPaid = totalPaid + parseFloat(amount);
-    // Si se completó el pago, marcar orden como completada y mesa como PAID
-    if (newTotalPaid >= parseFloat(order.total) - 0.01) {
+    const orderCompleted = newTotalPaid >= parseFloat(order.total) - 0.01;
+
+    // Si se completó el pago, marcar orden como completada
+    if (orderCompleted) {
       await tx.order.update({
         where: { id: parseInt(orderId) },
         data: { status: 'COMPLETED' },
@@ -59,16 +61,21 @@ const create = async (data) => {
       }
     }
 
-    return newPayment;
+    return { payment: newPayment, orderCompleted };
   });
 
+  // Emitir eventos solo si corresponde
   try {
     const io = getIO();
-    io.emit('order:updated', { id: parseInt(orderId), status: 'COMPLETED' });
-    io.emit('table:updated', { id: order.tableId, status: 'FREE' });
+    if (payment.orderCompleted) {
+      io.emit('order:updated', { id: parseInt(orderId), status: 'COMPLETED' });
+      io.emit('table:updated', { id: order.tableId, status: 'FREE' });
+    }
   } catch (e) { /* socket no listo */ }
 
-  return payment;
+  logger.info('Payment created', { orderId, amount, method: method || 'CASH' });
+
+  return payment.payment;
 };
 
 /**

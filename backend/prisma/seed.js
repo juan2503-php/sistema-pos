@@ -1,16 +1,25 @@
 // ============================================
-// Seed de datos iniciales
+// Seed de datos iniciales (Hardened)
 // ============================================
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const prisma = new PrismaClient();
 
 async function main() {
+  // Protección contra ejecución accidental en producción
+  if (process.env.NODE_ENV === 'production') {
+    console.error('⚠️  No se puede ejecutar seed en producción.');
+    console.error('   Use DEFAULT_ADMIN_PASSWORD para crear el admin manualmente.');
+    process.exit(1);
+  }
+
   console.log('🌱 Iniciando seed de datos...');
 
   // ── Admin por defecto ──
-  const adminPassword = await bcrypt.hash('admin123', 12);
+  const adminPwd = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin2026!Secure';
+  const adminPassword = await bcrypt.hash(adminPwd, 12);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@pos.com' },
     update: {},
@@ -24,7 +33,8 @@ async function main() {
   console.log('✅ Admin creado:', admin.email);
 
   // ── Mesero de ejemplo ──
-  const waiterPassword = await bcrypt.hash('mesero123', 12);
+  const waiterPwd = process.env.DEFAULT_WAITER_PASSWORD || 'Mesero2026!Secure';
+  const waiterPassword = await bcrypt.hash(waiterPwd, 12);
   const waiter = await prisma.user.upsert({
     where: { email: 'mesero@pos.com' },
     update: {},
@@ -105,6 +115,10 @@ async function main() {
   console.log('✅ 12 mesas creadas');
 
   console.log('🎉 Seed completado exitosamente');
+  console.log('');
+  console.log('📌 Credenciales de acceso:');
+  console.log(`   Admin:  admin@pos.com / ${adminPwd}`);
+  console.log(`   Mesero: mesero@pos.com / ${waiterPwd}`);
 }
 
 main()

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, Users, ShoppingBag, AlertTriangle } from 'lucide-react';
-import { 
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line
 } from 'recharts';
@@ -26,8 +26,8 @@ export default function Dashboard() {
 
   // Real-time integration
   useSocketEvents({
-    'new_order': fetchMetrics,
-    'order_updated': fetchMetrics
+    'order:created': fetchMetrics,
+    'order:updated': fetchMetrics
   });
 
   useEffect(() => {
@@ -126,32 +126,32 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={metrics.salesByDay.slice().reverse()}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
-                <XAxis 
-                  dataKey="date" 
+                <XAxis
+                  dataKey="date"
                   tickFormatter={(val) => new Date(val).toLocaleDateString('es-MX', { weekday: 'short' })}
-                  stroke="#888888" 
-                  fontSize={12} 
-                  tickLine={false} 
-                  axisLine={false} 
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
                 />
-                <YAxis 
-                  stroke="#888888" 
-                  fontSize={12} 
-                  tickLine={false} 
-                  axisLine={false} 
-                  tickFormatter={(value) => `$${value}`} 
+                <YAxis
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `$${value}`}
                 />
-                <Tooltip 
+                <Tooltip
                   formatter={(value) => [formatCurrency(value), 'Ventas']}
                   labelFormatter={(label) => new Date(label).toLocaleDateString()}
                   contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff' }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#3b82f6" 
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#3b82f6"
                   strokeWidth={3}
-                  activeDot={{ r: 8 }} 
+                  activeDot={{ r: 8 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -166,17 +166,17 @@ export default function Dashboard() {
               <BarChart data={metrics.topProducts.slice(0, 5)} layout="vertical" margin={{ left: 50 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#374151" />
                 <XAxis type="number" stroke="#888888" fontSize={12} />
-                <YAxis 
-                  dataKey="name" 
-                  type="category" 
-                  stroke="#888888" 
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  stroke="#888888"
                   fontSize={12}
-                  tickLine={false} 
-                  axisLine={false} 
+                  tickLine={false}
+                  axisLine={false}
                   width={100}
                 />
                 <Tooltip
-                  cursor={{fill: 'rgba(255, 255, 255, 0.05)'}}
+                  cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                   contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff' }}
                   formatter={(value) => [value, 'Unidades vendidas']}
                 />

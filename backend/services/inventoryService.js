@@ -1,9 +1,7 @@
 // ============================================
-// Servicio de Inventario
+// Servicio de Inventario (Hardened)
 // ============================================
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 /**
  * Obtener productos con stock bajo (stock <= minStock)

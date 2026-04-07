@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { formatCurrency } from '../../utils/helpers';
 
 export default function Tables() {
   const [tables, setTables] = useState([]);
@@ -118,9 +119,46 @@ export default function Tables() {
         <div className="p-8 text-center text-neutral-500">Cargando...</div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {tables.map((table) => (
+          {tables.map((table) => {
+            const activeOrder = table.orders && table.orders.length > 0 ? table.orders[0] : null;
+            const isOccupied = ['OCCUPIED', 'ATTENDED', 'PAID'].includes(table.status);
+            const orderTotal = activeOrder ? activeOrder.items?.reduce((sum, item) => sum + parseFloat(item.subtotal || (item.unitPrice * item.quantity)), 0) : 0;
+
+            return (
             <div key={table.id} className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-4 flex flex-col items-center justify-center relative group">
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+              
+              {/* Popover con detalles del pedido */}
+              {(isOccupied && activeOrder) && (
+                <div className="absolute top-[80%] left-1/2 -translate-x-1/2 w-72 bg-white dark:bg-neutral-800 rounded-xl shadow-2xl border border-neutral-200 dark:border-neutral-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[60] cursor-default">
+                  <div className="p-4 max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-neutral-300 dark:scrollbar-thumb-neutral-600 overscroll-contain">
+                    <div className="flex items-center gap-2 mb-3 border-b border-neutral-200 dark:border-neutral-700 pb-2">
+                      <Receipt className="w-4 h-4 text-primary" />
+                      <h3 className="font-bold text-sm">
+                        Pedido - Mesero: {activeOrder.user?.name?.split(' ')[0] || 'Desconocido'}
+                      </h3>
+                    </div>
+                    <ul className="space-y-2 mb-3">
+                      {activeOrder.items?.map((item, idx) => (
+                        <li key={item.id || idx} className="text-sm flex justify-between gap-3">
+                          <span className="flex-1 text-neutral-600 dark:text-neutral-300">
+                            <span className="font-medium mr-1.5">{item.quantity}x</span> 
+                            {item.product?.name}
+                          </span>
+                          <span className="font-medium text-neutral-900 dark:text-neutral-100 whitespace-nowrap">
+                            {formatCurrency(item.subtotal || (item.unitPrice * item.quantity))}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex justify-between items-center font-bold text-base pt-3 border-t border-neutral-200 dark:border-neutral-700">
+                      <span>Total:</span>
+                      <span className="text-primary">{formatCurrency(activeOrder.total || orderTotal || 0)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-10">
                 <button 
                   onClick={() => handleOpenModal(table)}
                   className="p-1.5 bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded hover:text-primary dark:hover:text-primary transition-colors"
@@ -148,7 +186,8 @@ export default function Tables() {
                 </span>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
 

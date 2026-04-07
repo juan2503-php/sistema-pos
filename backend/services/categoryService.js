@@ -1,9 +1,7 @@
 // ============================================
-// Servicio de Categorías
+// Servicio de Categorías (Hardened)
 // ============================================
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 const getAll = async () => {
   return prisma.category.findMany({
@@ -22,11 +20,23 @@ const getById = async (id) => {
 };
 
 const create = async (data) => {
-  return prisma.category.create({ data });
+  // Whitelist de campos
+  return prisma.category.create({
+    data: {
+      name: data.name,
+      icon: data.icon || null,
+    },
+  });
 };
 
 const update = async (id, data) => {
-  return prisma.category.update({ where: { id }, data });
+  // Whitelist de campos
+  const updateData = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.icon !== undefined) updateData.icon = data.icon;
+  if (data.active !== undefined) updateData.active = data.active;
+
+  return prisma.category.update({ where: { id }, data: updateData });
 };
 
 const remove = async (id) => {

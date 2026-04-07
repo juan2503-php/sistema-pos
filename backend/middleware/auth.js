@@ -1,10 +1,9 @@
 // ============================================
-// Middleware de Autenticación JWT
+// Middleware de Autenticación JWT (Hardened)
+// Usa Prisma singleton
 // ============================================
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 /**
  * Verifica que el request tenga un token JWT válido
@@ -31,7 +30,10 @@ const verifyToken = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Token inválido o expirado' });
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expirado', code: 'TOKEN_EXPIRED' });
+    }
+    return res.status(401).json({ error: 'Token inválido' });
   }
 };
 

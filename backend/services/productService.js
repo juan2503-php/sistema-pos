@@ -1,9 +1,7 @@
 // ============================================
-// Servicio de Productos
+// Servicio de Productos (Hardened)
 // ============================================
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 const getAll = async (filters = {}) => {
   const where = {};
@@ -30,11 +28,11 @@ const create = async (data) => {
   return prisma.product.create({
     data: {
       name: data.name,
-      description: data.description,
+      description: data.description || null,
       price: parseFloat(data.price),
       stock: parseInt(data.stock) || 0,
       minStock: parseInt(data.minStock) || 5,
-      image: data.image,
+      image: data.image || null,
       categoryId: parseInt(data.categoryId),
     },
     include: { category: { select: { id: true, name: true } } },
@@ -42,14 +40,15 @@ const create = async (data) => {
 };
 
 const update = async (id, data) => {
+  // Whitelist de campos permitidos
   const updateData = {};
-  if (data.name) updateData.name = data.name;
+  if (data.name !== undefined) updateData.name = data.name;
   if (data.description !== undefined) updateData.description = data.description;
-  if (data.price) updateData.price = parseFloat(data.price);
+  if (data.price !== undefined) updateData.price = parseFloat(data.price);
   if (data.stock !== undefined) updateData.stock = parseInt(data.stock);
   if (data.minStock !== undefined) updateData.minStock = parseInt(data.minStock);
   if (data.image !== undefined) updateData.image = data.image;
-  if (data.categoryId) updateData.categoryId = parseInt(data.categoryId);
+  if (data.categoryId !== undefined) updateData.categoryId = parseInt(data.categoryId);
   if (data.active !== undefined) updateData.active = data.active;
 
   return prisma.product.update({
@@ -70,13 +69,11 @@ const remove = async (id) => {
  * Productos con stock bajo
  */
 const getLowStock = async () => {
-  return prisma.product.findMany({
-    where: {
-      active: true,
-      stock: { lte: prisma.product.fields?.minStock || 5 },
-    },
+  const products = await prisma.product.findMany({
+    where: { active: true },
     include: { category: { select: { id: true, name: true } } },
   });
+  return products.filter((p) => p.stock <= p.minStock);
 };
 
 module.exports = { getAll, getById, create, update, remove, getLowStock };

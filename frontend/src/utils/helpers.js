@@ -1,8 +1,11 @@
 export const formatCurrency = (amount) => {
   const number = parseFloat(amount) || 0;
-  // Usar formato europeo (es-ES / de-DE) para forzar los puntos en miles
-  const formattedNumber = Math.round(number).toLocaleString('de-DE');
-  return `$${formattedNumber}`;
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(number);
 };
 
 export const formatDate = (dateString) => {

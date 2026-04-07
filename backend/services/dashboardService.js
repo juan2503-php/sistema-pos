@@ -1,9 +1,7 @@
 // ============================================
-// Servicio de Dashboard / Analíticas
+// Servicio de Dashboard / Analíticas (Hardened)
 // ============================================
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 /**
  * Obtener métricas del dashboard
@@ -34,7 +32,7 @@ const getMetrics = async (dateRange = {}) => {
   });
   const monthRevenue = monthOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
 
-  // Mesas atendidas hoy (Total de órdenes no canceladas)
+  // Mesas atendidas hoy
   const tablesServedToday = await prisma.order.count({
     where: {
       createdAt: { gte: today, lt: tomorrow },

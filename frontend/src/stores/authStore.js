@@ -6,13 +6,27 @@ export const useAuthStore = create(
     (set) => ({
       user: null,
       token: null,
+      refreshToken: null,
       
-      login: (userData, token) => set({ user: userData, token }),
+      login: (userData, token, refreshToken) => set({ user: userData, token, refreshToken }),
       
-      logout: () => set({ user: null, token: null }),
+      setToken: (token) => set({ token }),
+      
+      logout: () => {
+        const state = useAuthStore.getState();
+        // Invalidar refresh token en el backend
+        if (state.refreshToken) {
+          fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken: state.refreshToken }),
+          }).catch(() => {}); // No bloquear si falla
+        }
+        set({ user: null, token: null, refreshToken: null });
+      },
     }),
     {
-      name: 'pos-auth-storage', // key in local storage
+      name: 'pos-auth-storage',
     }
   )
 );

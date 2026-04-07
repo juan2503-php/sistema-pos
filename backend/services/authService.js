@@ -1,11 +1,12 @@
 // ============================================
-// Servicio de Autenticación
+// Servicio de Autenticación (Hardened)
+// Con Refresh Tokens y revocación
 // ============================================
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+const logger = require('../lib/logger');
 
 /**
  * Registrar nuevo usuario (solo admin puede crear)
@@ -25,7 +26,7 @@ const register = async ({ name, email, password, role }) => {
 };
 
 /**
- * Login de usuario
+ * Login de usuario — retorna access token + refresh token
  */
 const login = async ({ email, password }) => {
   const user = await prisma.user.findUnique({ where: { email } });
@@ -35,16 +36,77 @@ const login = async ({ email, password }) => {
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) throw { status: 401, message: 'Credenciales incorrectas' };
 
-  const token = jwt.sign(
+  // Access token corto (1 hora)
+  const accessToken = jwt.sign(
     { userId: user.id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+    { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '1h' }
   );
 
+  // Refresh token (7 días)
+  const refreshToken = crypto.randomBytes(40).toString('hex');
+  const refreshExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  await prisma.refreshToken.create({
+    data: {
+      token: refreshToken,
+      userId: user.id,
+      expiresAt: refreshExpiry,
+    },
+  });
+
+  // Limpiar refresh tokens expirados de este usuario
+  await prisma.refreshToken.deleteMany({
+    where: { userId: user.id, expiresAt: { lt: new Date() } },
+  });
+
+  logger.info('User logged in', { userId: user.id, email: user.email });
+
   return {
-    token,
+    token: accessToken,
+    refreshToken,
     user: { id: user.id, name: user.name, email: user.email, role: user.role },
   };
 };
 
-module.exports = { register, login };
+/**
+ * Renovar access token usando refresh token
+ */
+const refresh = async (refreshToken) => {
+  const stored = await prisma.refreshToken.findUnique({
+    where: { token: refreshToken },
+    include: { user: { select: { id: true, name: true, email: true, role: true, active: true } } },
+  });
+
+  if (!stored || stored.expiresAt < new Date()) {
+    if (stored) await prisma.refreshToken.delete({ where: { id: stored.id } });
+    throw { status: 401, message: 'Refresh token inválido o expirado' };
+  }
+
+  if (!stored.user.active) {
+    await prisma.refreshToken.delete({ where: { id: stored.id } });
+    throw { status: 401, message: 'Usuario desactivado' };
+  }
+
+  const accessToken = jwt.sign(
+    { userId: stored.user.id, role: stored.user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '1h' }
+  );
+
+  return {
+    token: accessToken,
+    user: stored.user,
+  };
+};
+
+/**
+ * Logout — invalidar refresh token
+ */
+const logout = async (refreshToken) => {
+  if (refreshToken) {
+    await prisma.refreshToken.deleteMany({ where: { token: refreshToken } });
+  }
+};
+
+module.exports = { register, login, refresh, logout };

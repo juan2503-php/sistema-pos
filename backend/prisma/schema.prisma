@@ -1,5 +1,5 @@
 // ============================================
-// POS Restaurant - Prisma Schema
+// POS Restaurant - Prisma Schema (Hardened)
 // ============================================
 
 generator client {
@@ -33,11 +33,18 @@ enum OrderStatus {
   CANCELLED
 }
 
-// ── Estados de pago ──
+// ── Métodos de pago ──
 enum PaymentMethod {
   CASH
   CARD
   TRANSFER
+}
+
+// ── Tipos de movimiento de inventario ──
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
 }
 
 // ============================================
@@ -54,7 +61,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  orders Order[]
+  orders        Order[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
 
   @@map("users")
 }
@@ -102,6 +111,7 @@ model Product {
   orderItems         OrderItem[]
   inventoryMovements InventoryMovement[]
 
+  @@index([categoryId])
   @@map("products")
 }
 
@@ -120,6 +130,10 @@ model Order {
   items    OrderItem[]
   payments Payment[]
 
+  @@index([tableId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
   @@map("orders")
 }
 
@@ -135,6 +149,8 @@ model OrderItem {
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
 
+  @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 
@@ -147,25 +163,65 @@ model Payment {
 
   order Order @relation(fields: [orderId], references: [id])
 
+  @@index([orderId])
+  @@index([createdAt])
   @@map("payments")
 }
 
 model InventoryMovement {
-  id        Int      @id @default(autoincrement())
+  id        Int          @id @default(autoincrement())
   productId Int
   quantity  Int
-  type      String   // "IN" o "OUT"
+  type      MovementType
   reason    String?
-  createdAt DateTime @default(now())
+  createdAt DateTime     @default(now())
 
   product Product @relation(fields: [productId], references: [id])
 
+  @@index([productId])
+  @@index([createdAt])
   @@map("inventory_movements")
 }
 
 model Setting {
-  key   String @id
-  value String @db.Text
+  key       String   @id
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@map("settings")
+}
+
+// ── Refresh Tokens (seguridad JWT) ──
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique @db.VarChar(255)
+  userId    Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ── Audit Log (trazabilidad) ──
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  action    String   // 'LOGIN', 'CREATE_ORDER', 'PROCESS_PAYMENT', etc.
+  entity    String   // 'Order', 'Payment', 'User', etc.
+  entityId  Int?
+  details   String?  @db.Text
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

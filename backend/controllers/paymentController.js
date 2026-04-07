@@ -1,13 +1,11 @@
 // ============================================
-// Controlador de Pagos
+// Controlador de Pagos (Hardened)
 // ============================================
 const paymentService = require('../services/paymentService');
-const { getIO } = require('../sockets');
 
 const create = async (req, res, next) => {
   try {
     const payment = await paymentService.create(req.body);
-    getIO().emit('order_updated', payment);
     res.status(201).json(payment);
   } catch (error) { next(error); }
 };

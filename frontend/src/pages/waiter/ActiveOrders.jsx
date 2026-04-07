@@ -10,7 +10,7 @@ export default function ActiveOrders() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Modal Pago
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -60,7 +60,7 @@ export default function ActiveOrders() {
       if (updatedOrder.status === 'COMPLETED' || updatedOrder.status === 'CANCELLED') {
         return prev.filter(o => o.id !== updatedOrder.id);
       }
-      
+
       // Si existe, actualizarla; si es nueva, ignórala porque otro hook debería encargar 'order:created'
       // O para ser robustos, volver a hacer fetch si los datos se complican
       return prev.map(o => o.id === updatedOrder.id ? { ...o, status: updatedOrder.status } : o);
@@ -90,11 +90,11 @@ export default function ActiveOrders() {
 
   const openPaymentModal = (order) => {
     setSelectedOrder(order);
-    
+
     // Calcular saldo pendiente y redondear a enteros
     const totalPaid = order.payments?.reduce((sum, p) => sum + parseFloat(p.amount), 0) || 0;
     const remaining = parseFloat(order.total) - totalPaid;
-    
+
     setPaymentAmount(Math.round(remaining).toLocaleString('de-DE'));
     setPaymentMethod('CASH');
     setSplitMode('TOTAL');
@@ -112,7 +112,7 @@ export default function ActiveOrders() {
         amount: parseInt(paymentAmount.toString().replace(/\./g, ''), 10),
         method: paymentMethod
       });
-      
+
       toast.success('Pago registrado');
       setIsPaymentModalOpen(false);
       fetchOrders(); // Refrescar para ver el nuevo estado/saldo
@@ -157,11 +157,10 @@ export default function ActiveOrders() {
 
                 <div className="text-right">
                   <p className="text-xl font-bold text-white font-mono">{formatCurrency(order.total)}</p>
-                  <span className={`px-2 py-0.5 mt-1 inline-block rounded text-[10px] font-bold uppercase tracking-wider ${
-                    order.status === 'PENDING' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50' : 
+                  <span className={`px-2 py-0.5 mt-1 inline-block rounded text-[10px] font-bold uppercase tracking-wider ${order.status === 'PENDING' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50' :
                     'bg-blue-500/20 text-blue-400 border border-blue-500/50'
-                  }`}>
-                    {order.status === 'PENDING' ? 'COCIENANDO' : 'EN MESA (ENTREGADO)'}
+                    }`}>
+                    {order.status === 'PENDING' ? 'COCINANDO' : 'EN MESA (ENTREGADO)'}
                   </span>
                 </div>
               </div>
@@ -194,16 +193,16 @@ export default function ActiveOrders() {
 
               {/* Actions Footer */}
               <div className="p-4 bg-neutral-800 border-t border-neutral-700 flex flex-wrap sm:flex-nowrap gap-2">
-                
+
                 {order.status === 'PENDING' ? (
-                  <button 
+                  <button
                     onClick={() => handleUpdateStatus(order.id, 'IN_PROGRESS')}
                     className="flex-1 py-3 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-[0_3px_0_0_#1d4ed8] active:shadow-none active:translate-y-[3px] transition-all flex items-center justify-center gap-2"
                   >
                     <CheckCircle className="w-5 h-5" /> Marcar Entregado
                   </button>
                 ) : (
-                  <button 
+                  <button
                     disabled // No action needed backwards here for simple UI
                     className="flex-1 py-3 px-2 bg-neutral-700 text-neutral-400 cursor-not-allowed rounded-xl font-bold text-sm flex items-center justify-center gap-2"
                   >
@@ -211,13 +210,13 @@ export default function ActiveOrders() {
                   </button>
                 )}
 
-                <button 
+                <button
                   onClick={() => openPaymentModal(order)}
                   className="flex-1 py-3 px-2 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold text-sm shadow-[0_3px_0_0_#15803d] active:shadow-none active:translate-y-[3px] transition-all flex items-center justify-center gap-2"
                 >
                   <Receipt className="w-5 h-5" /> {hasPayments ? 'Completar Cobro' : 'Realizar Cobro'}
                 </button>
-                
+
                 {!hasPayments && (
                   <button
                     onClick={() => navigate(`/waiter/edit-order/${order.id}`)}
@@ -247,74 +246,74 @@ export default function ActiveOrders() {
       {isPaymentModalOpen && selectedOrder && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-neutral-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-neutral-700">
-             <div className="p-5 border-b border-neutral-700 bg-neutral-900 text-center relative">
-                <h2 className="text-xl font-bold text-white">Cobrar Orden #{selectedOrder.id}</h2>
-                <button type="button" onClick={() => setIsPaymentModalOpen(false)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white">✕</button>
-             </div>
-             
-             {/* Split Tabs */}
-             {!selectedOrder.payments?.length ? (
-               <div className="flex bg-neutral-900 border-b border-neutral-700">
-                 <button type="button" onClick={() => setSplitMode('TOTAL')} className={`flex-1 p-3 text-sm font-bold ${splitMode === 'TOTAL' ? 'text-primary border-b-2 border-primary' : 'text-neutral-500'}`}>Total</button>
-                 <button type="button" onClick={() => setSplitMode('EQUAL_PARTS')} className={`flex-1 p-3 text-sm font-bold ${splitMode === 'EQUAL_PARTS' ? 'text-primary border-b-2 border-primary' : 'text-neutral-500'}`}>En Partes</button>
-                 <button type="button" onClick={() => setSplitMode('BY_PRODUCT')} className={`flex-1 p-3 text-sm font-bold ${splitMode === 'BY_PRODUCT' ? 'text-primary border-b-2 border-primary' : 'text-neutral-500'}`}>Por Platos</button>
-               </div>
-             ) : (
-               <div className="p-2 border-b border-neutral-700 bg-orange-500/10 text-center">
-                 <span className="text-xs font-bold text-orange-400">Pago Parcial en curso - Solo Cobro Manual</span>
-               </div>
-             )}
+            <div className="p-5 border-b border-neutral-700 bg-neutral-900 text-center relative">
+              <h2 className="text-xl font-bold text-white">Cobrar Orden #{selectedOrder.id}</h2>
+              <button type="button" onClick={() => setIsPaymentModalOpen(false)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white">✕</button>
+            </div>
 
-             <div className="max-h-[65vh] overflow-y-auto hidden-scrollbar">
-               <form onSubmit={handlePayment} className="p-5 space-y-6">
-                  
-                  {splitMode === 'EQUAL_PARTS' && (
-                    <div className="p-4 bg-neutral-800 border border-neutral-700 rounded-xl flex items-center justify-between">
-                      <span className="text-neutral-400 font-medium text-sm">Dividir entre:</span>
-                      <div className="flex items-center gap-3">
-                         <button type="button" onClick={() => setSplitWays(Math.max(2, splitWays - 1))} className="w-8 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white font-bold flex items-center justify-center transition-colors">-</button>
-                         <span className="text-xl font-bold text-white w-6 text-center">{splitWays}</span>
-                         <button type="button" onClick={() => setSplitWays(splitWays + 1)} className="w-8 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white font-bold flex items-center justify-center transition-colors">+</button>
-                      </div>
+            {/* Split Tabs */}
+            {!selectedOrder.payments?.length ? (
+              <div className="flex bg-neutral-900 border-b border-neutral-700">
+                <button type="button" onClick={() => setSplitMode('TOTAL')} className={`flex-1 p-3 text-sm font-bold ${splitMode === 'TOTAL' ? 'text-primary border-b-2 border-primary' : 'text-neutral-500'}`}>Total</button>
+                <button type="button" onClick={() => setSplitMode('EQUAL_PARTS')} className={`flex-1 p-3 text-sm font-bold ${splitMode === 'EQUAL_PARTS' ? 'text-primary border-b-2 border-primary' : 'text-neutral-500'}`}>En Partes</button>
+                <button type="button" onClick={() => setSplitMode('BY_PRODUCT')} className={`flex-1 p-3 text-sm font-bold ${splitMode === 'BY_PRODUCT' ? 'text-primary border-b-2 border-primary' : 'text-neutral-500'}`}>Por Platos</button>
+              </div>
+            ) : (
+              <div className="p-2 border-b border-neutral-700 bg-orange-500/10 text-center">
+                <span className="text-xs font-bold text-orange-400">Pago Parcial en curso - Solo Cobro Manual</span>
+              </div>
+            )}
+
+            <div className="max-h-[65vh] overflow-y-auto hidden-scrollbar">
+              <form onSubmit={handlePayment} className="p-5 space-y-6">
+
+                {splitMode === 'EQUAL_PARTS' && (
+                  <div className="p-4 bg-neutral-800 border border-neutral-700 rounded-xl flex items-center justify-between">
+                    <span className="text-neutral-400 font-medium text-sm">Dividir entre:</span>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={() => setSplitWays(Math.max(2, splitWays - 1))} className="w-8 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white font-bold flex items-center justify-center transition-colors">-</button>
+                      <span className="text-xl font-bold text-white w-6 text-center">{splitWays}</span>
+                      <button type="button" onClick={() => setSplitWays(splitWays + 1)} className="w-8 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white font-bold flex items-center justify-center transition-colors">+</button>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {splitMode === 'BY_PRODUCT' && (
-                     <div className="bg-neutral-800 border border-neutral-700 rounded-xl min-h-[100px] max-h-56 overflow-y-auto p-2 space-y-1">
-                       <p className="text-xs text-neutral-400 px-2 py-1 uppercase tracking-wider font-bold">Selecciona qué vas a pagar:</p>
-                       {selectedOrder?.items?.map(item => {
-                          const isSelected = selectedItemsForPayment.some(i => i.id === item.id);
-                          const toggleSelection = () => {
-                             if (isSelected) {
-                                 setSelectedItemsForPayment(prev => prev.filter(i => i.id !== item.id));
-                             } else {
-                                 setSelectedItemsForPayment(prev => [...prev, item]);
-                             }
-                          };
-                          return (
-                            <div key={item.id} onClick={toggleSelection} className={`flex justify-between items-center p-3 rounded-lg cursor-pointer transition-all border ${isSelected ? 'border-primary bg-primary/10' : 'border-transparent hover:bg-neutral-700/50'}`}>
-                               <div className="flex items-center gap-3">
-                                 <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'border-primary bg-primary text-white' : 'border-neutral-500'}`}>
-                                    {isSelected && <CheckCircle className="w-3 h-3" />}
-                                 </div>
-                                 <div className="text-left">
-                                    <p className="text-sm font-bold text-white leading-tight">{item.product?.name}</p>
-                                    <p className="text-xs text-primary font-bold mt-0.5">x{item.quantity}</p>
-                                 </div>
-                               </div>
-                               <span className="font-mono text-sm font-medium text-neutral-300">{formatCurrency(item.subtotal)}</span>
+                {splitMode === 'BY_PRODUCT' && (
+                  <div className="bg-neutral-800 border border-neutral-700 rounded-xl min-h-[100px] max-h-56 overflow-y-auto p-2 space-y-1">
+                    <p className="text-xs text-neutral-400 px-2 py-1 uppercase tracking-wider font-bold">Selecciona qué vas a pagar:</p>
+                    {selectedOrder?.items?.map(item => {
+                      const isSelected = selectedItemsForPayment.some(i => i.id === item.id);
+                      const toggleSelection = () => {
+                        if (isSelected) {
+                          setSelectedItemsForPayment(prev => prev.filter(i => i.id !== item.id));
+                        } else {
+                          setSelectedItemsForPayment(prev => [...prev, item]);
+                        }
+                      };
+                      return (
+                        <div key={item.id} onClick={toggleSelection} className={`flex justify-between items-center p-3 rounded-lg cursor-pointer transition-all border ${isSelected ? 'border-primary bg-primary/10' : 'border-transparent hover:bg-neutral-700/50'}`}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'border-primary bg-primary text-white' : 'border-neutral-500'}`}>
+                              {isSelected && <CheckCircle className="w-3 h-3" />}
                             </div>
-                          )
-                       })}
-                     </div>
-                  )}
+                            <div className="text-left">
+                              <p className="text-sm font-bold text-white leading-tight">{item.product?.name}</p>
+                              <p className="text-xs text-primary font-bold mt-0.5">x{item.quantity}</p>
+                            </div>
+                          </div>
+                          <span className="font-mono text-sm font-medium text-neutral-300">{formatCurrency(item.subtotal)}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
 
-                  <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-700 flex flex-col items-center justify-center">
-                    <span className="text-neutral-400 text-sm font-medium mb-1">Monto a Cobrar</span>
-                    <div className="relative w-full max-w-[200px]">
+                <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-700 flex flex-col items-center justify-center">
+                  <span className="text-neutral-400 text-sm font-medium mb-1">Monto a Cobrar</span>
+                  <div className="relative w-full max-w-[200px]">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl text-neutral-500 font-mono">$</span>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       required
                       value={paymentAmount}
                       onChange={(e) => {
@@ -330,31 +329,31 @@ export default function ActiveOrders() {
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-neutral-400">Método de Pago</label>
                   <div className="grid grid-cols-3 gap-2">
-                     <button type="button" onClick={() => setPaymentMethod('CASH')} className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${paymentMethod === 'CASH' ? 'border-primary bg-primary/20 text-primary' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
-                        <Banknote className="w-6 h-6 mb-1" />
-                        <span className="text-xs font-bold">Efectivo</span>
-                     </button>
-                     <button type="button" onClick={() => setPaymentMethod('CARD')} className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${paymentMethod === 'CARD' ? 'border-primary bg-primary/20 text-primary' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
-                        <CreditCard className="w-6 h-6 mb-1" />
-                        <span className="text-xs font-bold">Tarjeta</span>
-                     </button>
-                     <button type="button" onClick={() => setPaymentMethod('TRANSFER')} className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${paymentMethod === 'TRANSFER' ? 'border-primary bg-primary/20 text-primary' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
-                        <Landmark className="w-6 h-6 mb-1" />
-                        <span className="text-xs font-bold">Transf.</span>
-                     </button>
+                    <button type="button" onClick={() => setPaymentMethod('CASH')} className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${paymentMethod === 'CASH' ? 'border-primary bg-primary/20 text-primary' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
+                      <Banknote className="w-6 h-6 mb-1" />
+                      <span className="text-xs font-bold">Efectivo</span>
+                    </button>
+                    <button type="button" onClick={() => setPaymentMethod('CARD')} className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${paymentMethod === 'CARD' ? 'border-primary bg-primary/20 text-primary' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
+                      <CreditCard className="w-6 h-6 mb-1" />
+                      <span className="text-xs font-bold">Tarjeta</span>
+                    </button>
+                    <button type="button" onClick={() => setPaymentMethod('TRANSFER')} className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${paymentMethod === 'TRANSFER' ? 'border-primary bg-primary/20 text-primary' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
+                      <Landmark className="w-6 h-6 mb-1" />
+                      <span className="text-xs font-bold">Transf.</span>
+                    </button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
-                   <button type="button" onClick={() => setIsPaymentModalOpen(false)} className="py-3 rounded-xl bg-neutral-700 text-white font-bold hover:bg-neutral-600 transition-colors">
-                      Cancelar
-                   </button>
-                   <button type="submit" disabled={isProcessing} className="py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                      {isProcessing ? 'Procesando...' : 'Cobrar'}
-                   </button>
+                  <button type="button" onClick={() => setIsPaymentModalOpen(false)} className="py-3 rounded-xl bg-neutral-700 text-white font-bold hover:bg-neutral-600 transition-colors">
+                    Cancelar
+                  </button>
+                  <button type="submit" disabled={isProcessing} className="py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                    {isProcessing ? 'Procesando...' : 'Cobrar'}
+                  </button>
                 </div>
-             </form>
-           </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
