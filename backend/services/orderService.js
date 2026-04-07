@@ -123,6 +123,7 @@ const create = async (data, userId) => {
     const io = getIO();
     io.emit('order:created', order);
     io.emit('table:updated', { id: parseInt(tableId), status: 'OCCUPIED' });
+    io.emit('inventory:updated');
   } catch (e) { /* socket no listo */ }
 
   logger.info('Order created', { orderId: order.id, tableId, userId });
@@ -182,7 +183,9 @@ const cancel = async (id) => {
   });
 
   try {
-    getIO().emit('order:updated', { id, status: 'CANCELLED' });
+    const io = getIO();
+    io.emit('order:updated', { id, status: 'CANCELLED' });
+    io.emit('inventory:updated');
   } catch (e) { /* socket no listo */ }
 
   logger.info('Order cancelled', { orderId: id });
@@ -295,7 +298,9 @@ const update = async (id, data, userId) => {
   });
 
   try {
-    getIO().emit('order:updated', updatedOrder);
+    const io = getIO();
+    io.emit('order:updated', updatedOrder);
+    io.emit('inventory:updated');
   } catch (e) { /* socket no listo */ }
 
   logger.info('Order updated', { orderId: id, userId });

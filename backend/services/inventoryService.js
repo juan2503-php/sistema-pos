@@ -2,6 +2,7 @@
 // Servicio de Inventario (Hardened)
 // ============================================
 const prisma = require('../lib/prisma');
+const { getIO } = require('../sockets');
 
 /**
  * Obtener productos con stock bajo (stock <= minStock)
@@ -35,6 +36,11 @@ const addStock = async (productId, quantity, reason) => {
 
     return product;
   });
+
+  try {
+    getIO().emit('inventory:updated');
+  } catch (e) { /* ignore */ }
+
   return result;
 };
 

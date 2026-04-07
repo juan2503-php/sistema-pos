@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_URL,
 });
 
 // Flag para evitar múltiples refresh simultáneos
@@ -74,7 +76,7 @@ api.interceptors.response.use(
       }
 
       try {
-        const { data } = await axios.post('/api/auth/refresh', { refreshToken });
+        const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
         const newToken = data.token;
 
         useAuthStore.getState().setToken(newToken);

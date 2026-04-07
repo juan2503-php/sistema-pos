@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '../stores/authStore';
 
-const SOCKET_URL = '/';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '/';
 
 export function useSocketEvents(events) {
   const { user, token } = useAuthStore();

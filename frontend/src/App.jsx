@@ -23,7 +23,16 @@ import EditOrder from './pages/waiter/EditOrder';
 import ActiveOrders from './pages/waiter/ActiveOrders';
 
 function App() {
-  const { token, user } = useAuthStore();
+  const { token, user, _hasHydrated } = useAuthStore();
+
+  // Esperar a que el store se rehidrate desde localStorage antes de renderizar rutas
+  if (!_hasHydrated) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-neutral-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <>

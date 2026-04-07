@@ -13,7 +13,9 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { cn } from '../utils/helpers';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '../services/api';
+import { useSocketEvents } from '../hooks/useSocket';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -29,6 +31,25 @@ export default function AdminLayout() {
   const { user, token, logout } = useAuthStore();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [lowStockCount, setLowStockCount] = useState(0);
+
+  const fetchInventory = async () => {
+    try {
+      const { data } = await api.get('/inventory/summary');
+      setLowStockCount(data.lowStockCount || 0);
+    } catch (err) {
+      console.error('Error fetching inventory summary', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!token || user?.role !== 'ADMIN') return;
+    fetchInventory();
+  }, [token, user]);
+
+  useSocketEvents({
+    'inventory:updated': fetchInventory
+  });
 
   if (!token) return <Navigate to="/login" />;
   if (user?.role !== 'ADMIN') return <Navigate to="/waiter" />;
@@ -70,15 +91,22 @@ export default function AdminLayout() {
                 onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                     isActive 
                       ? "bg-primary/10 text-primary" 
                       : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 hover:text-neutral-900 dark:hover:text-neutral-200"
                   )
                 }
               >
-                <item.icon className="h-5 w-5" />
-                {item.label}
+                <div className="flex items-center gap-3">
+                  <item.icon className="h-5 w-5" />
+                  {item.label}
+                </div>
+                {item.label === 'Inventario' && lowStockCount > 0 && (
+                  <span className="flex items-center justify-center bg-red-500 text-white text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-full ring-2 ring-white dark:ring-neutral-800 shadow-sm">
+                    {lowStockCount}
+                  </span>
+                )}
               </NavLink>
             ))}
           </nav>

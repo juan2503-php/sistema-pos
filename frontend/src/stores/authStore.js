@@ -7,7 +7,9 @@ export const useAuthStore = create(
       user: null,
       token: null,
       refreshToken: null,
+      _hasHydrated: false,
       
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
       login: (userData, token, refreshToken) => set({ user: userData, token, refreshToken }),
       
       setToken: (token) => set({ token }),
@@ -27,6 +29,9 @@ export const useAuthStore = create(
     }),
     {
       name: 'pos-auth-storage',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
