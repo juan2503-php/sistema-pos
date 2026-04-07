@@ -34,8 +34,16 @@ app.use(helmet());
 app.disable('x-powered-by');
 
 // ── CORS ──
+const getOrigin = () => {
+  try {
+    return process.env.FRONTEND_URL ? new URL(process.env.FRONTEND_URL).origin : 'http://localhost:5173';
+  } catch (e) {
+    return process.env.FRONTEND_URL || 'http://localhost:5173';
+  }
+};
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: getOrigin(),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
