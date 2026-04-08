@@ -43,7 +43,7 @@ export default function Login() {
             <div className="w-16 h-16 bg-primary/20 text-primary rounded-full flex items-center justify-center mb-4">
               <Store size={32} />
             </div>
-            <h1 className="text-2xl font-bold text-white">POS Restaurant</h1>
+            <h1 className="text-2xl font-bold text-white">Ace Dev Solutions</h1>
             <p className="text-neutral-400 mt-2">Inicia sesión para continuar</p>
           </div>
 

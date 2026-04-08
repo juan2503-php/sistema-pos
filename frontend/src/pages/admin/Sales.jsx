@@ -112,7 +112,7 @@ export default function Sales() {
     
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
-    doc.text('POS Restaurant', 105, 20, null, null, 'center');
+    doc.text('Ace Dev Solutions', 105, 20, null, null, 'center');
     
     doc.setFontSize(14);
     doc.setFont("helvetica", "normal");
@@ -293,7 +293,7 @@ export default function Sales() {
               ) : selectedOrder ? (
                 <div className="space-y-6">
                   <div className="text-center border-b border-dashed border-neutral-300 dark:border-neutral-700 pb-4">
-                    <h3 className="text-2xl font-bold dark:text-white mb-1 tracking-tight">POS Restaurant</h3>
+                    <h3 className="text-2xl font-bold dark:text-white mb-1 tracking-tight">Ace Dev Solutions</h3>
                     <p className="text-neutral-500 text-sm uppercase tracking-wider font-semibold">Recibo de Venta</p>
                   </div>
                   
