@@ -235,6 +235,7 @@ model Attendance {
   userId    Int
   date      DateTime @db.Date
   attended  Boolean  @default(true)
+  dailyRate Decimal  @default(70000) @db.Decimal(10, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

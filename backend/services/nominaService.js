@@ -9,9 +9,9 @@ const prisma = require('../lib/prisma');
  * para el mes/año especificado.
  */
 const getWaitersWithPayroll = async (year, month) => {
-  // Rango del mes completo
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0); // Último día del mes
+  // Rango del mes completo en UTC
+  const startDate = new Date(Date.UTC(year, month - 1, 1));
+  const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)); // Último día del mes
 
   // Traer todos los meseros activos
   const waiters = await prisma.user.findMany({
@@ -25,7 +25,7 @@ const getWaitersWithPayroll = async (year, month) => {
           date: { gte: startDate, lte: endDate },
           attended: true,
         },
-        select: { id: true, date: true, attended: true },
+        select: { id: true, date: true, attended: true, dailyRate: true },
       },
       salaryConfig: {
         select: { dailyRate: true },
@@ -37,7 +37,8 @@ const getWaitersWithPayroll = async (year, month) => {
   return waiters.map((w) => {
     const dailyRate = w.salaryConfig ? parseFloat(w.salaryConfig.dailyRate) : 70000;
     const daysWorked = w.attendances.length;
-    const totalSalary = daysWorked * dailyRate;
+    // Sumar el valor de cada día asistido según la tarifa que tenía en ese momento
+    const totalSalary = w.attendances.reduce((sum, att) => sum + parseFloat(att.dailyRate), 0);
 
     return {
       id: w.id,
@@ -55,8 +56,8 @@ const getWaitersWithPayroll = async (year, month) => {
  * Retorna un array de fechas (ISO strings) en las que asistió.
  */
 const getAttendanceByMonth = async (userId, year, month) => {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0);
+  const startDate = new Date(Date.UTC(year, month - 1, 1));
+  const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 
   const records = await prisma.attendance.findMany({
     where: {
@@ -95,16 +96,37 @@ const toggleAttendance = async (userId, dateStr) => {
   });
 
   if (existing) {
-    // Toggle: invertir el estado
+    const nextAttended = !existing.attended;
+    const updateData = { attended: nextAttended };
+
+    if (nextAttended) {
+      // Cargar tarifa activa al momento de marcar asistencia
+      const config = await prisma.salaryConfig.findUnique({
+        where: { userId: parsedUserId },
+      });
+      updateData.dailyRate = config ? parseFloat(config.dailyRate) : 70000;
+    }
+
     const updated = await prisma.attendance.update({
       where: { userId_date: { userId: parsedUserId, date } },
-      data: { attended: !existing.attended },
+      data: updateData,
     });
     return { attended: updated.attended, date: dateStr };
   } else {
-    // Crear nuevo registro de asistencia
+    // Buscar tarifa diaria configurada actualmente para el mesero
+    const config = await prisma.salaryConfig.findUnique({
+      where: { userId: parsedUserId },
+    });
+    const currentRate = config ? parseFloat(config.dailyRate) : 70000;
+
+    // Crear nuevo registro de asistencia con la tarifa diaria actual
     const created = await prisma.attendance.create({
-      data: { userId: parsedUserId, date, attended: true },
+      data: {
+        userId: parsedUserId,
+        date,
+        attended: true,
+        dailyRate: currentRate,
+      },
     });
     return { attended: created.attended, date: dateStr };
   }
