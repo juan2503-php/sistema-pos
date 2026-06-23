@@ -128,7 +128,7 @@ function AttendanceGrid({ year, month, attendedDays, onToggle, isAdmin }) {
       </div>
 
       {/* Leyenda */}
-      <div className="flex items-center gap-4 mt-4 text-xs text-neutral-500 dark:text-neutral-400">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 text-xs text-neutral-500 dark:text-neutral-400">
         <div className="flex items-center gap-1.5">
           <div className="w-4 h-4 rounded bg-emerald-500" />
           <span>Asistió</span>
@@ -138,7 +138,9 @@ function AttendanceGrid({ year, month, attendedDays, onToggle, isAdmin }) {
           <span>No asistió</span>
         </div>
         {isAdmin && (
-          <span className="ml-auto italic">Haz clic en un día para marcar/desmarcar</span>
+          <p className="w-full text-left italic mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+            Haz clic en un día para marcar/desmarcar
+          </p>
         )}
       </div>
     </div>
@@ -266,7 +268,7 @@ function AttendanceModal({ waiter, year, month, onClose, isAdmin }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden">
+      <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-3">
@@ -295,29 +297,32 @@ function AttendanceModal({ waiter, year, month, onClose, isAdmin }) {
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
             </div>
           ) : (
-            <AttendanceGrid
-              year={year}
-              month={month}
-              attendedDays={attendedDays}
-              onToggle={handleToggle}
-              isAdmin={isAdmin}
-            />
+            <div className="max-w-[340px] mx-auto">
+              <AttendanceGrid
+                year={year}
+                month={month}
+                attendedDays={attendedDays}
+                onToggle={handleToggle}
+                isAdmin={isAdmin}
+              />
+            </div>
           )}
         </div>
 
         {/* Footer — resumen */}
-        <div className="flex items-center justify-between px-6 py-4 bg-neutral-50 dark:bg-neutral-900/50 border-t border-neutral-200 dark:border-neutral-700">
-          <div className="flex items-center gap-6 text-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-4 bg-neutral-50 dark:bg-neutral-900/50 border-t border-neutral-200 dark:border-neutral-700">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
             <div>
               <span className="text-neutral-500 dark:text-neutral-400">Días asistidos:</span>{' '}
               <span className="font-bold text-emerald-600 dark:text-emerald-500">{daysWorked}</span>
             </div>
+            <div className="hidden sm:block text-neutral-300 dark:text-neutral-700">|</div>
             <div>
               <span className="text-neutral-500 dark:text-neutral-400">Valor/día:</span>{' '}
               <span className="font-bold">{formatCurrency(waiter.dailyRate)}</span>
             </div>
           </div>
-          <div className="text-right">
+          <div className="text-left sm:text-right w-full sm:w-auto border-t sm:border-0 pt-2 sm:pt-0 border-neutral-200 dark:border-neutral-700">
             <p className="text-xs text-neutral-500 dark:text-neutral-400">Total Nómina</p>
             <p className="text-xl font-bold text-primary">{formatCurrency(totalSalary)}</p>
           </div>
@@ -494,7 +499,7 @@ export default function Nomina() {
                   <th className="px-6 py-4 font-medium text-center">Días Trabajados</th>
                   <th className="px-6 py-4 font-medium">Valor por Día (COP)</th>
                   <th className="px-6 py-4 font-medium">Sueldo Total (COP)</th>
-                  <th className="px-6 py-4 font-medium text-right">Acciones</th>
+                  <th className="px-6 py-4 font-medium text-right hidden sm:table-cell">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
@@ -513,7 +518,15 @@ export default function Nomina() {
                           <div className="font-medium text-neutral-900 dark:text-white">
                             {waiter.name}
                           </div>
-                          <div className="text-xs text-neutral-500">{waiter.email}</div>
+                          <div className="text-xs text-neutral-500 mb-1">{waiter.email}</div>
+                          {/* Botón rápido de asistencia para móvil */}
+                          <button
+                            onClick={() => setSelectedWaiter(waiter)}
+                            className="sm:hidden inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/15 dark:hover:bg-primary/25 transition-colors"
+                          >
+                            <CalendarDays className="w-3.5 h-3.5" />
+                            Asistencia
+                          </button>
                         </div>
                       </div>
                     </td>
@@ -555,7 +568,7 @@ export default function Nomina() {
                     </td>
 
                     {/* Acciones */}
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right hidden sm:table-cell">
                       <button
                         onClick={() => setSelectedWaiter(waiter)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/15 dark:hover:bg-primary/25 transition-colors"
@@ -582,7 +595,7 @@ export default function Nomina() {
                     <td className="px-6 py-4 font-bold text-lg text-neutral-900 dark:text-white">
                       {formatCurrency(stats.totalPayroll)}
                     </td>
-                    <td />
+                    <td className="hidden sm:table-cell" />
                   </tr>
                 </tfoot>
               )}
