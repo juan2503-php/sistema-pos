@@ -1,0 +1,11 @@
+Muy sencillo. Cada vez que quieras resetear, solo abre una terminal en la carpeta backend y ejecuta este comando:
+
+powershell
+$env:DATABASE_URL="mysql://2Co1eRR1G7K3nPF.root:o7XWQ2TBfTQlDWGw@gateway01.us-east-1.prod.aws.tidbcloud.com:4000/test?sslaccept=strict&ssl-mode=VERIFY_IDENTITY&ssl={`"rejectUnauthorized`":true}"; node prisma/reset-dashboard.js
+Pasos:
+
+Abre terminal en pos-system/backend
+Pega el comando
+Escribe si cuando te lo pida
+¡Listo! Dashboard en cero
+Tip: Si quieres, puedes guardarlo como un script .ps1 para no tener que recordar el comando. ¿Quieres que te lo cree?

@@ -9,7 +9,8 @@ import {
   Package,
   ReceiptText,
   Menu,
-  SquareDashedKanban
+  SquareDashedKanban,
+  Banknote
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { cn } from '../utils/helpers';
@@ -25,6 +26,7 @@ const navItems = [
   { icon: Tags, label: 'Categorías', path: '/admin/categories' },
   { icon: Package, label: 'Inventario', path: '/admin/inventory' },
   { icon: Users, label: 'Usuarios / Meseros', path: '/admin/users' },
+  { icon: Banknote, label: 'Nómina', path: '/admin/nomina' },
 ];
 
 export default function AdminLayout() {

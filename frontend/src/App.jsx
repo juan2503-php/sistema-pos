@@ -15,6 +15,7 @@ import Tables from './pages/admin/Tables';
 import Users from './pages/admin/Users';
 import Inventory from './pages/admin/Inventory';
 import Sales from './pages/admin/Sales';
+import Nomina from './pages/admin/Nomina';
 
 // === Waiter Pages ===
 import TablesView from './pages/waiter/TablesView';
@@ -56,6 +57,7 @@ function App() {
           <Route path="categories" element={<Categories />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="users" element={<Users />} />
+          <Route path="nomina" element={<Nomina />} />
         </Route>
 
         {/* Waiter Routes */}

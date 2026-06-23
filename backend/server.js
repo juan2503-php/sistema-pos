@@ -66,6 +66,7 @@ app.use('/api/orders', require('./routes/orders'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/nomina', require('./routes/nomina'));
 
 // ── Health check ──
 app.get('/api/health', (req, res) => {

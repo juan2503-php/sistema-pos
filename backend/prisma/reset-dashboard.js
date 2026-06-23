@@ -12,6 +12,7 @@
  *   ✅  Resetea todas las mesas a FREE
  *
  * NO toca: usuarios, productos, categorías, settings
+ * IDs reseteados a 1 (TRUNCATE)
  * ============================================================
  */
 
@@ -57,7 +58,8 @@ async function main() {
   }
 
   console.log('\n⚠️  ADVERTENCIA: Esta acción es IRREVERSIBLE.');
-  console.log('   Se eliminarán todas las órdenes, pagos y movimientos de inventario.\n');
+  console.log('   Se eliminarán todas las órdenes, pagos y movimientos.');
+  console.log('   Los IDs se resetearán a 1 (TRUNCATE).\n');
 
   const respuesta = await confirm('¿Estás seguro? Escribe "si" para continuar: ');
 
@@ -70,24 +72,29 @@ async function main() {
 
   console.log('\n🔄 Limpiando datos...\n');
 
-  // Borrar en orden correcto (respetando foreign keys)
-  await prisma.auditLog.deleteMany({});
-  console.log('   ✅ audit_logs limpiado');
+  // Deshabilitar FK checks para poder truncar en cualquier orden
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0');
 
-  await prisma.refreshToken.deleteMany({});
-  console.log('   ✅ refresh_tokens limpiado');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE `audit_logs`');
+  console.log('   ✅ audit_logs limpiado (IDs reseteados)');
 
-  await prisma.payment.deleteMany({});
-  console.log('   ✅ payments limpiado');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE `refresh_tokens`');
+  console.log('   ✅ refresh_tokens limpiado (IDs reseteados)');
 
-  await prisma.orderItem.deleteMany({});
-  console.log('   ✅ order_items limpiado');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE `payments`');
+  console.log('   ✅ payments limpiado (IDs reseteados)');
 
-  await prisma.order.deleteMany({});
-  console.log('   ✅ orders limpiado');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE `order_items`');
+  console.log('   ✅ order_items limpiado (IDs reseteados)');
 
-  await prisma.inventoryMovement.deleteMany({});
-  console.log('   ✅ inventory_movements limpiado');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE `orders`');
+  console.log('   ✅ orders limpiado (IDs reseteados)');
+
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE `inventory_movements`');
+  console.log('   ✅ inventory_movements limpiado (IDs reseteados)');
+
+  // Restaurar FK checks
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1');
 
   // Resetear estado de todas las mesas a FREE
   await prisma.table.updateMany({
@@ -96,6 +103,7 @@ async function main() {
   console.log('   ✅ Mesas reseteadas a FREE');
 
   console.log('\n🎉 ¡Listo! El dashboard está en cero.');
+  console.log('   IDs reseteados a 1 en todas las tablas.');
   console.log('   Los productos, categorías y usuarios NO fueron afectados.\n');
 
   rl.close();
@@ -105,5 +113,6 @@ async function main() {
 main().catch((e) => {
   console.error('\n❌ Error:', e.message);
   prisma.$disconnect();
+  rl.close();
   process.exit(1);
 });
