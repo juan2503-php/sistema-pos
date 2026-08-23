@@ -68,30 +68,39 @@ export default function Sales() {
 
   const exportToPDF = () => {
     if (payments.length === 0) return toast.error('No hay datos para exportar');
-    const doc = new jsPDF();
-    doc.text('Reporte de Ventas', 14, 15);
-    
-    const tableColumn = ["Fecha", "Ticket", "Mesa", "Método", "Monto"];
-    const tableRows = [];
+    try {
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text('Reporte de Ventas', 14, 15);
+      
+      const tableColumn = ["Fecha", "Ticket", "Mesa", "Método", "Monto"];
+      const tableRows = [];
 
-    payments.forEach(p => {
-      tableRows.push([
-        formatDate(p.createdAt),
-        `#${p.orderId.toString().padStart(5, '0')}`,
-        `Mesa ${p.order.table.number}`,
-        METHOD_NAMES[p.method] || p.method,
-        formatCurrency(p.amount)
-      ]);
-    });
+      payments.forEach(p => {
+        tableRows.push([
+          formatDate(p.createdAt),
+          `#${(p.orderId || p.order?.id || 0).toString().padStart(5, '0')}`,
+          `Mesa ${p.order?.table?.number ?? '-'}`,
+          METHOD_NAMES[p.method] || p.method,
+          formatCurrency(p.amount)
+        ]);
+      });
 
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 20,
-    });
-    
-    doc.save("Reporte_Ventas.pdf");
-    toast.success('PDF exportado exitosamente');
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 22,
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185] }
+      });
+      
+      doc.save("Reporte_Ventas.pdf");
+      toast.success('PDF exportado exitosamente');
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+      toast.error('Error al exportar el PDF');
+    }
   };
 
   const handleViewReceipt = async (orderId) => {
@@ -115,97 +124,123 @@ export default function Sales() {
 
   const orderVouchers = orderPayments.filter(p => p.voucherUrl);
 
-  // Carga una imagen y la convierte a data URL para insertarla en el PDF
-  const loadImageAsDataUrl = (url) => new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      canvas.getContext('2d').drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
+  // Carga una imagen y la convierte a data URL sin problemas de CORS ni canvas tainted
+  const loadImageAsDataUrl = async (url) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Network error');
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+          } catch (e) {
+            reject(e);
+          }
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+  };
 
   const downloadReceiptPDF = async () => {
     if (!selectedOrder) return;
-    const doc = new jsPDF();
+    try {
+      const doc = new jsPDF();
 
-    doc.setFontSize(22);
-    doc.setFont("helvetica", "bold");
-    doc.text('Ace Dev Solutions', 105, 20, null, null, 'center');
+      doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
+      doc.text('Ace Dev Solutions', 105, 20, null, null, 'center');
 
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "normal");
-    doc.text('FACTURA DE VENTA', 105, 30, null, null, 'center');
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "normal");
+      doc.text('FACTURA DE VENTA', 105, 30, null, null, 'center');
 
-    doc.setFontSize(11);
-    doc.text(`Ticket/Orden: #${selectedOrder.id.toString().padStart(5, '0')}`, 14, 45);
-    doc.text(`Fecha: ${formatDate(selectedOrder.createdAt)}`, 14, 52);
-    doc.text(`Mesa: Mesa ${selectedOrder.table?.number}`, 14, 59);
-    doc.text(`Atendido por: ${selectedOrder.user?.name}`, 14, 66);
+      doc.setFontSize(11);
+      doc.text(`Ticket/Orden: #${(selectedOrder.id || 0).toString().padStart(5, '0')}`, 14, 45);
+      doc.text(`Fecha: ${formatDate(selectedOrder.createdAt)}`, 14, 52);
+      doc.text(`Mesa: Mesa ${selectedOrder.table?.number ?? '-'}`, 14, 59);
+      doc.text(`Atendido por: ${selectedOrder.user?.name ?? 'Personal'}`, 14, 66);
 
-    const tableColumn = ["Cant.", "Descripción", "P. Unit", "Subtotal"];
-    const tableRows = selectedOrder.items.map(item => [
-      item.quantity,
-      item.product.name,
-      formatCurrency(item.unitPrice),
-      formatCurrency(item.subtotal)
-    ]);
+      const tableColumn = ["Cant.", "Descripción", "P. Unit", "Subtotal"];
+      const tableRows = (selectedOrder.items || []).map(item => [
+        item.quantity,
+        item.product?.name || 'Producto',
+        formatCurrency(item.unitPrice),
+        formatCurrency(item.subtotal)
+      ]);
 
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 75,
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] }
-    });
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 75,
+        theme: 'grid',
+        headStyles: { fillColor: [41, 128, 185] }
+      });
 
-    const finalY = doc.lastAutoTable.finalY || 75;
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text(`Total Pagado: ${formatCurrency(selectedOrder.total)}`, 14, finalY + 15);
+      const finalY = doc.lastAutoTable?.finalY || 75;
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Total Pagado: ${formatCurrency(selectedOrder.total)}`, 14, finalY + 15);
 
-    // Comprobantes de pago (transferencias) al final de la factura
-    if (orderVouchers.length > 0) {
-      for (const voucher of orderVouchers) {
-        try {
-          const dataUrl = await loadImageAsDataUrl(getAssetUrl(voucher.voucherUrl));
+      // Comprobantes de pago (transferencias) al final de la factura
+      if (orderVouchers.length > 0) {
+        for (const voucher of orderVouchers) {
+          try {
+            const fullUrl = getAssetUrl(voucher.voucherUrl);
+            const dataUrl = await loadImageAsDataUrl(fullUrl);
 
-          // Título de sección
-          let cursorY = (doc.lastAutoTable?.finalY || finalY) + 30;
-          if (cursorY > 230) {
-            doc.addPage();
-            cursorY = 20;
+            // Título de sección
+            let cursorY = (doc.lastAutoTable?.finalY || finalY) + 30;
+            if (cursorY > 230) {
+              doc.addPage();
+              cursorY = 20;
+            }
+            doc.setFontSize(13);
+            doc.setFont("helvetica", "bold");
+            doc.text('Comprobante de Pago', 105, cursorY, null, null, 'center');
+
+            // Imagen ajustada al ancho útil de la página manteniendo proporción
+            const format = doc.getImageProperties(dataUrl);
+            const pdfWidth = 182; // A4: 210 - márgenes de 14 a cada lado
+            const pdfHeight = (format.height * pdfWidth) / format.width;
+
+            let imageY = cursorY + 8;
+            if (imageY + pdfHeight > 285) {
+              doc.addPage();
+              imageY = 20;
+            }
+            doc.addImage(dataUrl, 'JPEG', 14, imageY, pdfWidth, pdfHeight);
+
+            // Posicionar el cursor después de la imagen para un posible siguiente comprobante
+            doc.lastAutoTable = { finalY: imageY + pdfHeight - 15 };
+          } catch (e) {
+            console.warn('No se pudo incluir imagen de comprobante en PDF:', e);
           }
-          doc.setFontSize(13);
-          doc.setFont("helvetica", "bold");
-          doc.text('Comprobante de Pago', 105, cursorY, null, null, 'center');
-
-          // Imagen ajustada al ancho útil de la página manteniendo proporción
-          const format = doc.getImageProperties(dataUrl);
-          const pdfWidth = 182; // A4: 210 - márgenes de 14 a cada lado
-          const pdfHeight = (format.height * pdfWidth) / format.width;
-
-          let imageY = cursorY + 8;
-          if (imageY + pdfHeight > 285) {
-            doc.addPage();
-            imageY = 20;
-          }
-          doc.addImage(dataUrl, 'JPEG', 14, imageY, pdfWidth, pdfHeight);
-
-          // Posicionar el cursor después de la imagen para un posible siguiente comprobante
-          doc.lastAutoTable = { finalY: imageY + pdfHeight - 15 };
-        } catch (e) {
-          toast.error('No se pudo incluir un comprobante en el PDF');
         }
       }
-    }
 
-    doc.save(`Factura_${selectedOrder.id.toString().padStart(5, '0')}.pdf`);
-    toast.success('Factura descargada');
+      doc.save(`Factura_${(selectedOrder.id || 0).toString().padStart(5, '0')}.pdf`);
+      toast.success('Factura descargada exitosamente');
+    } catch (error) {
+      console.error('Error al generar PDF de factura:', error);
+      toast.error('Error al generar el PDF');
+    }
   };
 
   return (
