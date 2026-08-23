@@ -117,7 +117,7 @@ export default function ActiveOrders() {
         formData.append('amount', parseInt(paymentAmount.toString().replace(/\./g, ''), 10));
         formData.append('method', paymentMethod);
         formData.append('voucher', voucherFile);
-        await api.post('/payments', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await api.post('/payments', formData);
       } else {
         await api.post('/payments', {
           orderId: selectedOrder.id,

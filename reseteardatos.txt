@@ -8,4 +8,4 @@ Abre terminal en pos-system/backend
 Pega el comando
 Escribe si cuando te lo pida
 ¡Listo! Dashboard en cero
-Tip: Si quieres, puedes guardarlo como un script .ps1 para no tener que recordar el comando. ¿Quieres que te lo cree?
+
