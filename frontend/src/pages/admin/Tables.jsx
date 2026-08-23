@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { formatCurrency } from '../../utils/helpers';
 import { useSocketEvents } from '../../hooks/useSocket';
+import ImageUpload from '../../components/ImageUpload';
 
 export default function Tables() {
   const [tables, setTables] = useState([]);
@@ -23,6 +24,7 @@ export default function Tables() {
   const [splitMode, setSplitMode] = useState('TOTAL');
   const [splitWays, setSplitWays] = useState(2);
   const [selectedItemsForPayment, setSelectedItemsForPayment] = useState([]);
+  const [voucherFile, setVoucherFile] = useState(null);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -77,6 +79,7 @@ export default function Tables() {
     setSplitMode('TOTAL');
     setSplitWays(2);
     setSelectedItemsForPayment([]);
+    setVoucherFile(null);
     setIsPaymentModalOpen(true);
   };
 
@@ -84,11 +87,20 @@ export default function Tables() {
     e.preventDefault();
     setIsProcessing(true);
     try {
-      await api.post('/payments', {
-        orderId: selectedOrder.id,
-        amount: parseInt(paymentAmount.toString().replace(/\./g, ''), 10),
-        method: paymentMethod
-      });
+      if (paymentMethod === 'TRANSFER' && voucherFile) {
+        const formData = new FormData();
+        formData.append('orderId', selectedOrder.id);
+        formData.append('amount', parseInt(paymentAmount.toString().replace(/\./g, ''), 10));
+        formData.append('method', paymentMethod);
+        formData.append('voucher', voucherFile);
+        await api.post('/payments', formData);
+      } else {
+        await api.post('/payments', {
+          orderId: selectedOrder.id,
+          amount: parseInt(paymentAmount.toString().replace(/\./g, ''), 10),
+          method: paymentMethod
+        });
+      }
 
       toast.success('Pago registrado');
       setIsPaymentModalOpen(false);
@@ -377,6 +389,11 @@ export default function Tables() {
                     </button>
                   </div>
                 </div>
+
+                {/* Comprobante opcional en transferencias */}
+                {paymentMethod === 'TRANSFER' && (
+                  <ImageUpload value={voucherFile} onChange={setVoucherFile} label="Comprobante de Transferencia (Opcional)" />
+                )}
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <button type="button" onClick={() => setIsPaymentModalOpen(false)} className="py-3 rounded-xl bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-white font-bold hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors">
