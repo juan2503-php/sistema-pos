@@ -357,9 +357,9 @@ export default function ActiveOrders() {
                   </div>
                 </div>
 
-                {/* Comprobante obligatorio en pago TOTAL por transferencia */}
-                {paymentMethod === 'TRANSFER' && splitMode === 'TOTAL' && (
-                  <ImageUpload value={voucherFile} onChange={setVoucherFile} />
+                {/* Comprobante opcional en transferencias */}
+                {paymentMethod === 'TRANSFER' && (
+                  <ImageUpload value={voucherFile} onChange={setVoucherFile} label="Comprobante de Transferencia (Opcional)" />
                 )}
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
@@ -368,7 +368,7 @@ export default function ActiveOrders() {
                   </button>
                   <button
                     type="submit"
-                    disabled={isProcessing || (paymentMethod === 'TRANSFER' && splitMode === 'TOTAL' && !voucherFile)}
+                    disabled={isProcessing}
                     className="py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isProcessing ? 'Procesando...' : 'Cobrar'}

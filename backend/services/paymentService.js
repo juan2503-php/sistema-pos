@@ -25,11 +25,6 @@ const create = async (data) => {
     throw { status: 400, message: `Monto excede el saldo pendiente: $${remaining.toFixed(2)}` };
   }
 
-  // Un pago TOTAL por transferencia exige comprobante adjunto
-  const isFullPayment = parseFloat(amount) >= remaining - 0.01;
-  if (method === 'TRANSFER' && isFullPayment && !voucherUrl) {
-    throw { status: 400, message: 'Debe adjuntar el comprobante de la transferencia' };
-  }
 
   const payment = await prisma.$transaction(async (tx) => {
     const newPayment = await tx.payment.create({
