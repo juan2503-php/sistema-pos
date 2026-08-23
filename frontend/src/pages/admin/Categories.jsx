@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
@@ -69,6 +69,16 @@ export default function Categories() {
     }
   };
 
+  const handleToggleVisibility = async (cat) => {
+    try {
+      await api.put(`/categories/${cat.id}`, { active: !cat.active });
+      toast.success(cat.active ? 'Categoría oculta del menú' : 'Categoría visible en el menú');
+      fetchCategories();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Error al cambiar visibilidad');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -119,7 +129,14 @@ export default function Categories() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button 
+                        <button
+                          onClick={() => handleToggleVisibility(cat)}
+                          className={`p-2 transition-colors ${cat.active ? 'text-neutral-500 hover:text-primary dark:hover:text-primary' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'}`}
+                          title={cat.active ? 'Ocultar del menú' : 'Mostrar en el menú'}
+                        >
+                          {cat.active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                        </button>
+                        <button
                           onClick={() => handleOpenModal(cat)}
                           className="p-2 text-neutral-500 hover:text-primary dark:hover:text-primary transition-colors"
                         >

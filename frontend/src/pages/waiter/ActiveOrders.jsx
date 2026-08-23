@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import { useSocketEvents } from '../../hooks/useSocket';
+import ImageUpload from '../../components/ImageUpload';
 
 export default function ActiveOrders() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function ActiveOrders() {
   const [splitMode, setSplitMode] = useState('TOTAL'); // 'TOTAL', 'EQUAL_PARTS', 'BY_PRODUCT'
   const [splitWays, setSplitWays] = useState(2);
   const [selectedItemsForPayment, setSelectedItemsForPayment] = useState([]);
+  const [voucherFile, setVoucherFile] = useState(null);
 
   useEffect(() => {
     if (!selectedOrder || !isPaymentModalOpen) return;
@@ -100,6 +102,7 @@ export default function ActiveOrders() {
     setSplitMode('TOTAL');
     setSplitWays(2);
     setSelectedItemsForPayment([]);
+    setVoucherFile(null);
     setIsPaymentModalOpen(true);
   };
 
@@ -107,11 +110,21 @@ export default function ActiveOrders() {
     e.preventDefault();
     setIsProcessing(true);
     try {
-      await api.post('/payments', {
-        orderId: selectedOrder.id,
-        amount: parseInt(paymentAmount.toString().replace(/\./g, ''), 10),
-        method: paymentMethod
-      });
+      // Con transferencia total se envía multipart/form-data para incluir el comprobante
+      if (paymentMethod === 'TRANSFER' && voucherFile) {
+        const formData = new FormData();
+        formData.append('orderId', selectedOrder.id);
+        formData.append('amount', parseInt(paymentAmount.toString().replace(/\./g, ''), 10));
+        formData.append('method', paymentMethod);
+        formData.append('voucher', voucherFile);
+        await api.post('/payments', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      } else {
+        await api.post('/payments', {
+          orderId: selectedOrder.id,
+          amount: parseInt(paymentAmount.toString().replace(/\./g, ''), 10),
+          method: paymentMethod
+        });
+      }
 
       toast.success('Pago registrado');
       setIsPaymentModalOpen(false);
@@ -344,11 +357,20 @@ export default function ActiveOrders() {
                   </div>
                 </div>
 
+                {/* Comprobante obligatorio en pago TOTAL por transferencia */}
+                {paymentMethod === 'TRANSFER' && splitMode === 'TOTAL' && (
+                  <ImageUpload value={voucherFile} onChange={setVoucherFile} />
+                )}
+
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <button type="button" onClick={() => setIsPaymentModalOpen(false)} className="py-3 rounded-xl bg-neutral-700 text-white font-bold hover:bg-neutral-600 transition-colors">
                     Cancelar
                   </button>
-                  <button type="submit" disabled={isProcessing} className="py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  <button
+                    type="submit"
+                    disabled={isProcessing || (paymentMethod === 'TRANSFER' && splitMode === 'TOTAL' && !voucherFile)}
+                    className="py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
                     {isProcessing ? 'Procesando...' : 'Cobrar'}
                   </button>
                 </div>

@@ -6,6 +6,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const http = require('http');
 const dotenv = require('dotenv');
+const path = require('path');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const { initSocket } = require('./sockets');
 const logger = require('./lib/logger');
@@ -30,7 +31,8 @@ const app = express();
 const server = http.createServer(app);
 
 // ── Security Headers (Helmet) ──
-app.use(helmet());
+// Permitir que el frontend cargue imágenes (comprobantes) desde otro origen
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.disable('x-powered-by');
 
 // ── CORS ──
@@ -52,6 +54,12 @@ app.use(cors({
 // ── Body parsing con límite de tamaño ──
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// ── Archivos estáticos (comprobantes de pago) ──
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '7d',
+  immutable: true,
+}));
 
 // ── Rate Limiting global ──
 app.use('/api/', apiLimiter);

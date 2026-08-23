@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Plus, Minus, Search, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { formatCurrency } from '../../utils/helpers';
 import { useAuthStore } from '../../stores/authStore';
+import { useSocketEvents } from '../../hooks/useSocket';
 
 export default function EditOrder() {
   const { orderId } = useParams();
@@ -26,6 +27,26 @@ export default function EditOrder() {
     fetchData();
   }, [orderId]);
 
+  // Refrescar menú (categorías visibles y productos) — usado en tiempo real
+  const refreshMenu = useCallback(async () => {
+    try {
+      const [catRes, prodRes] = await Promise.all([
+        api.get('/categories'),
+        api.get('/products?active=true')
+      ]);
+      const visibleCats = catRes.data.filter(c => c.active);
+      setCategories(visibleCats);
+      setProducts(prodRes.data.filter(p => visibleCats.some(c => c.id === p.categoryId)));
+      // Si la categoría activa fue ocultada, saltar a la primera visible
+      setActiveCategory(prev => visibleCats.some(c => c.id === prev) ? prev : (visibleCats[0]?.id ?? null));
+    } catch (error) { /* silencioso: el menú se recargará en la próxima visita */ }
+  }, []);
+
+  useSocketEvents({
+    'category:updated': refreshMenu,
+    'product:updated': refreshMenu,
+  });
+
   const fetchData = async () => {
     try {
       const [orderRes, catRes, prodRes] = await Promise.all([
@@ -34,9 +55,11 @@ export default function EditOrder() {
         api.get('/products?active=true')
       ]);
       setTable(orderRes.data.table);
-      setCategories(catRes.data);
-      setProducts(prodRes.data);
-      if (catRes.data.length > 0) setActiveCategory(catRes.data[0].id);
+      // Solo categorías visibles en el menú del negocio
+      const visibleCats = catRes.data.filter(c => c.active);
+      setCategories(visibleCats);
+      setProducts(prodRes.data.filter(p => visibleCats.some(c => c.id === p.categoryId)));
+      if (visibleCats.length > 0) setActiveCategory(visibleCats[0].id);
 
       // Precargar carrito con los items existentes de la orden
       if (orderRes.data.items) {

@@ -10,7 +10,7 @@ const logger = require('../lib/logger');
  * Crear un pago para una orden
  */
 const create = async (data) => {
-  const { orderId, amount, method } = data;
+  const { orderId, amount, method, voucherUrl } = data;
 
   const order = await prisma.order.findUnique({
     where: { id: parseInt(orderId) },
@@ -25,12 +25,19 @@ const create = async (data) => {
     throw { status: 400, message: `Monto excede el saldo pendiente: $${remaining.toFixed(2)}` };
   }
 
+  // Un pago TOTAL por transferencia exige comprobante adjunto
+  const isFullPayment = parseFloat(amount) >= remaining - 0.01;
+  if (method === 'TRANSFER' && isFullPayment && !voucherUrl) {
+    throw { status: 400, message: 'Debe adjuntar el comprobante de la transferencia' };
+  }
+
   const payment = await prisma.$transaction(async (tx) => {
     const newPayment = await tx.payment.create({
       data: {
         orderId: parseInt(orderId),
         amount: parseFloat(amount),
         method: method || 'CASH',
+        voucherUrl: voucherUrl || null,
       },
     });
 

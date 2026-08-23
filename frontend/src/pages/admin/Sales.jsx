@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Calendar, FileText, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
-import { formatDate, formatCurrency } from '../../utils/helpers';
+import { formatDate, formatCurrency, getAssetUrl } from '../../utils/helpers';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -19,8 +19,10 @@ export default function Sales() {
   
   // Modal Recibo Individual
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [orderPayments, setOrderPayments] = useState([]);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [loadingReceipt, setLoadingReceipt] = useState(false);
+  const [voucherPreview, setVoucherPreview] = useState(null);
   
   // Filters
   const [dateFrom, setDateFrom] = useState('');
@@ -95,9 +97,14 @@ export default function Sales() {
   const handleViewReceipt = async (orderId) => {
     setLoadingReceipt(true);
     setIsReceiptModalOpen(true);
+    setOrderPayments([]);
     try {
-      const { data } = await api.get(`/orders/${orderId}`);
-      setSelectedOrder(data);
+      const [orderRes, paymentsRes] = await Promise.all([
+        api.get(`/orders/${orderId}`),
+        api.get(`/payments/order/${orderId}`),
+      ]);
+      setSelectedOrder(orderRes.data);
+      setOrderPayments(paymentsRes.data);
     } catch (error) {
       toast.error('Error al cargar la factura');
       setIsReceiptModalOpen(false);
@@ -106,24 +113,40 @@ export default function Sales() {
     }
   };
 
-  const downloadReceiptPDF = () => {
+  const orderVouchers = orderPayments.filter(p => p.voucherUrl);
+
+  // Carga una imagen y la convierte a data URL para insertarla en el PDF
+  const loadImageAsDataUrl = (url) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+
+  const downloadReceiptPDF = async () => {
     if (!selectedOrder) return;
     const doc = new jsPDF();
-    
+
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
     doc.text('Ace Dev Solutions', 105, 20, null, null, 'center');
-    
+
     doc.setFontSize(14);
     doc.setFont("helvetica", "normal");
     doc.text('FACTURA DE VENTA', 105, 30, null, null, 'center');
-    
+
     doc.setFontSize(11);
     doc.text(`Ticket/Orden: #${selectedOrder.id.toString().padStart(5, '0')}`, 14, 45);
     doc.text(`Fecha: ${formatDate(selectedOrder.createdAt)}`, 14, 52);
     doc.text(`Mesa: Mesa ${selectedOrder.table?.number}`, 14, 59);
     doc.text(`Atendido por: ${selectedOrder.user?.name}`, 14, 66);
-    
+
     const tableColumn = ["Cant.", "Descripción", "P. Unit", "Subtotal"];
     const tableRows = selectedOrder.items.map(item => [
       item.quantity,
@@ -139,12 +162,48 @@ export default function Sales() {
       theme: 'grid',
       headStyles: { fillColor: [41, 128, 185] }
     });
-    
+
     const finalY = doc.lastAutoTable.finalY || 75;
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.text(`Total Pagado: ${formatCurrency(selectedOrder.total)}`, 14, finalY + 15);
-    
+
+    // Comprobantes de pago (transferencias) al final de la factura
+    if (orderVouchers.length > 0) {
+      for (const voucher of orderVouchers) {
+        try {
+          const dataUrl = await loadImageAsDataUrl(getAssetUrl(voucher.voucherUrl));
+
+          // Título de sección
+          let cursorY = (doc.lastAutoTable?.finalY || finalY) + 30;
+          if (cursorY > 230) {
+            doc.addPage();
+            cursorY = 20;
+          }
+          doc.setFontSize(13);
+          doc.setFont("helvetica", "bold");
+          doc.text('Comprobante de Pago', 105, cursorY, null, null, 'center');
+
+          // Imagen ajustada al ancho útil de la página manteniendo proporción
+          const format = doc.getImageProperties(dataUrl);
+          const pdfWidth = 182; // A4: 210 - márgenes de 14 a cada lado
+          const pdfHeight = (format.height * pdfWidth) / format.width;
+
+          let imageY = cursorY + 8;
+          if (imageY + pdfHeight > 285) {
+            doc.addPage();
+            imageY = 20;
+          }
+          doc.addImage(dataUrl, 'JPEG', 14, imageY, pdfWidth, pdfHeight);
+
+          // Posicionar el cursor después de la imagen para un posible siguiente comprobante
+          doc.lastAutoTable = { finalY: imageY + pdfHeight - 15 };
+        } catch (e) {
+          toast.error('No se pudo incluir un comprobante en el PDF');
+        }
+      }
+    }
+
     doc.save(`Factura_${selectedOrder.id.toString().padStart(5, '0')}.pdf`);
     toast.success('Factura descargada');
   };
@@ -246,13 +305,27 @@ export default function Sales() {
                       Mesa {p.order.table.number}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        p.method === 'CASH' ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-500' :
-                        p.method === 'CARD' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-500' :
-                        'bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-500 text-purple-500'
-                      }`}>
-                        {METHOD_NAMES[p.method] || p.method}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                          p.method === 'CASH' ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-500' :
+                          p.method === 'CARD' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-500' :
+                          'bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-500 text-purple-500'
+                        }`}>
+                          {METHOD_NAMES[p.method] || p.method}
+                        </span>
+                        {p.voucherUrl && (
+                          <img
+                            src={getAssetUrl(p.voucherUrl)}
+                            alt="Comprobante"
+                            title="Ver comprobante de transferencia"
+                            onClick={(e) => {
+                              e.stopPropagation(); // Evitar que abra el modal de la factura
+                              setVoucherPreview(getAssetUrl(p.voucherUrl));
+                            }}
+                            className="w-9 h-9 rounded-lg object-cover border border-neutral-200 dark:border-neutral-700 hover:ring-2 hover:ring-primary transition-all cursor-pointer shrink-0"
+                          />
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right font-bold">
                       {formatCurrency(p.amount)}
@@ -336,6 +409,25 @@ export default function Sales() {
                     <span className="text-neutral-500 text-base uppercase font-semibold">Total Pagado</span>
                     <span className="font-mono text-3xl text-green-600 dark:text-green-500">{formatCurrency(selectedOrder.total)}</span>
                   </div>
+
+                  {orderVouchers.length > 0 && (
+                    <div className="border-t border-dashed border-neutral-300 dark:border-neutral-700 pt-4">
+                      <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold mb-3">
+                        Comprobante{orderVouchers.length > 1 ? 's' : ''} de Transferencia
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        {orderVouchers.map(v => (
+                          <img
+                            key={v.id}
+                            src={getAssetUrl(v.voucherUrl)}
+                            alt={`Comprobante pago #${v.id}`}
+                            onClick={() => setVoucherPreview(getAssetUrl(v.voucherUrl))}
+                            className="w-24 h-24 object-cover rounded-xl border border-neutral-200 dark:border-neutral-700 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                  <div className="text-center py-10 text-red-500">Error al cargar la información. Intenta de nuevo.</div>
@@ -350,6 +442,29 @@ export default function Sales() {
                   <Download className="w-5 h-5" /> Descargar PDF
                </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox comprobante */}
+      {voucherPreview && (
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-[60] p-4 backdrop-blur-sm"
+          onClick={() => setVoucherPreview(null)}
+        >
+          <div className="relative max-w-3xl w-full">
+            <button
+              onClick={() => setVoucherPreview(null)}
+              className="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-white text-black font-bold shadow-lg hover:bg-neutral-200 transition-colors"
+              title="Cerrar"
+            >
+              ✕
+            </button>
+            <img
+              src={voucherPreview}
+              alt="Comprobante de pago ampliado"
+              className="w-full max-h-[85vh] object-contain rounded-xl"
+            />
           </div>
         </div>
       )}

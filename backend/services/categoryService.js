@@ -2,6 +2,15 @@
 // Servicio de Categorías (Hardened)
 // ============================================
 const prisma = require('../lib/prisma');
+const { getIO } = require('../sockets');
+
+// Emitir cambio de categoría para actualizar menús en tiempo real
+const emitCategoryUpdated = (category) => {
+  try {
+    const io = getIO();
+    io.emit('category:updated', { id: category.id, name: category.name, active: category.active });
+  } catch (e) { /* socket no listo */ }
+};
 
 const getAll = async () => {
   return prisma.category.findMany({
@@ -36,14 +45,18 @@ const update = async (id, data) => {
   if (data.icon !== undefined) updateData.icon = data.icon;
   if (data.active !== undefined) updateData.active = data.active;
 
-  return prisma.category.update({ where: { id }, data: updateData });
+  const category = await prisma.category.update({ where: { id }, data: updateData });
+  emitCategoryUpdated(category);
+  return category;
 };
 
 const remove = async (id) => {
-  return prisma.category.update({
+  const category = await prisma.category.update({
     where: { id },
     data: { active: false },
   });
+  emitCategoryUpdated(category);
+  return category;
 };
 
 module.exports = { getAll, getById, create, update, remove };

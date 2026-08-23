@@ -2,6 +2,15 @@
 // Servicio de Productos (Hardened)
 // ============================================
 const prisma = require('../lib/prisma');
+const { getIO } = require('../sockets');
+
+// Emitir cambio de producto para actualizar menús en tiempo real
+const emitProductUpdated = (product) => {
+  try {
+    const io = getIO();
+    io.emit('product:updated', { id: product.id, name: product.name, active: product.active });
+  } catch (e) { /* socket no listo */ }
+};
 
 const getAll = async (filters = {}) => {
   const where = {};
@@ -51,18 +60,22 @@ const update = async (id, data) => {
   if (data.categoryId !== undefined) updateData.categoryId = parseInt(data.categoryId);
   if (data.active !== undefined) updateData.active = data.active;
 
-  return prisma.product.update({
+  const product = await prisma.product.update({
     where: { id },
     data: updateData,
     include: { category: { select: { id: true, name: true } } },
   });
+  emitProductUpdated(product);
+  return product;
 };
 
 const remove = async (id) => {
-  return prisma.product.update({
+  const product = await prisma.product.update({
     where: { id },
     data: { active: false },
   });
+  emitProductUpdated(product);
+  return product;
 };
 
 /**

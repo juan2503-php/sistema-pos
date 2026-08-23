@@ -23,3 +23,10 @@ export const formatDate = (dateString) => {
 export function cn(...classes) {
   return classes.filter(Boolean).join(' ');
 }
+
+// Convierte una ruta relativa del backend (/uploads/...) en URL completa
+export function getAssetUrl(path) {
+  if (!path) return null;
+  const baseUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/api\/?$/, '');
+  return `${baseUrl}${path}`;
+}
