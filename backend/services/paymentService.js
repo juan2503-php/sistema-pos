@@ -19,25 +19,32 @@ const create = async (data) => {
   if (!order) throw { status: 404, message: 'Orden no encontrada' };
 
   const totalPaid = order.payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-  const remaining = parseFloat(order.total) - totalPaid;
+  const rawRemaining = parseFloat(order.total) - totalPaid;
+  const remaining = Math.max(0, rawRemaining);
 
-  if (parseFloat(amount) > remaining + 0.01) {
-    throw { status: 400, message: `Monto excede el saldo pendiente: $${remaining.toFixed(2)}` };
+  let paymentAmount = parseFloat(amount);
+
+  // Manejar diferencias por redondeo de centavos/pesos
+  if (paymentAmount > remaining) {
+    if (paymentAmount - remaining <= 2.0 || Math.round(paymentAmount) === Math.round(remaining)) {
+      paymentAmount = remaining;
+    } else {
+      throw { status: 400, message: `Monto excede el saldo pendiente: $${Math.round(remaining).toLocaleString('es-CO')}` };
+    }
   }
-
 
   const payment = await prisma.$transaction(async (tx) => {
     const newPayment = await tx.payment.create({
       data: {
         orderId: parseInt(orderId),
-        amount: parseFloat(amount),
+        amount: paymentAmount,
         method: method || 'CASH',
         voucherUrl: voucherUrl || null,
       },
     });
 
-    const newTotalPaid = totalPaid + parseFloat(amount);
-    const orderCompleted = newTotalPaid >= parseFloat(order.total) - 0.01;
+    const newTotalPaid = totalPaid + paymentAmount;
+    const orderCompleted = newTotalPaid >= parseFloat(order.total) - 1.0;
 
     // Si se completó el pago, marcar orden como completada
     if (orderCompleted) {
