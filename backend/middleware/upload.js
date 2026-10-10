@@ -16,15 +16,6 @@ if (!fs.existsSync(VOUCHER_DIR)) {
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_VOUCHER_SIZE = 5 * 1024 * 1024; // 5MB
 
-const voucherStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, VOUCHER_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `voucher-${unique}${ext}`);
-  },
-});
-
 const voucherFileFilter = (req, file, cb) => {
   if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
     return cb(null, true);
@@ -33,7 +24,7 @@ const voucherFileFilter = (req, file, cb) => {
 };
 
 const uploadVoucher = multer({
-  storage: voucherStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: MAX_VOUCHER_SIZE },
   fileFilter: voucherFileFilter,
 });

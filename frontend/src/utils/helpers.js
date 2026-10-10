@@ -27,6 +27,12 @@ export function cn(...classes) {
 // Convierte una ruta relativa del backend (/uploads/...) en URL completa
 export function getAssetUrl(path) {
   if (!path) return null;
+  // Si la ruta ya es una URL absoluta (ej. Cloudinary, S3), la retornamos tal cual
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:image')) {
+    return path;
+  }
+  
   const baseUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/api\/?$/, '');
-  return `${baseUrl}${path}`;
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${baseUrl}${cleanPath}`;
 }

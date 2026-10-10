@@ -49,12 +49,12 @@ async function main() {
 
   // ── Categorías ──
   const categories = [
-    { name: 'Entradas', icon: '🥗' },
-    { name: 'Platos Fuertes', icon: '🍖' },
-    { name: 'Bebidas', icon: '🥤' },
-    { name: 'Postres', icon: '🍰' },
-    { name: 'Cervezas', icon: '🍺' },
-    { name: 'Vinos', icon: '🍷' },
+    { name: 'Entradas', icon: '' },
+    { name: 'Platos Fuertes', icon: '' },
+    { name: 'Bebidas', icon: '' },
+    { name: 'Postres', icon: '' },
+    { name: 'Cervezas', icon: '' },
+    { name: 'Vinos', icon: '' },
   ];
 
   for (const cat of categories) {
