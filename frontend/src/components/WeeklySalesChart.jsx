@@ -23,6 +23,11 @@ export default function WeeklySalesChart({ salesByDay = [] }) {
     const weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     const weekDataMap = { Lun: 0, Mar: 0, Mié: 0, Jue: 0, Vie: 0, Sáb: 0, Dom: 0 };
 
+    // Calcular el día actual en la escala Lunes (0) a Domingo (6)
+    const today = new Date();
+    const todayJsDay = today.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+    const currentWeekDayIndex = todayJsDay === 0 ? 6 : todayJsDay - 1;
+
     salesByDay.forEach((item) => {
       if (!item.date) return;
       // Normalizar fecha
@@ -36,7 +41,13 @@ export default function WeeklySalesChart({ salesByDay = [] }) {
       }
     });
 
-    const seriesData = weekDays.map((day) => weekDataMap[day]);
+    // Los días futuros de la semana se dejan en null para que la curva no caiga a cero artificialmente
+    const seriesData = weekDays.map((day, index) => {
+      if (index > currentWeekDayIndex) {
+        return null;
+      }
+      return weekDataMap[day];
+    });
 
     const isDarkMode = document.documentElement.classList.contains('dark') ||
       window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -57,6 +68,10 @@ export default function WeeklySalesChart({ salesByDay = [] }) {
         padding: [8, 12],
         formatter: (params) => {
           const item = params[0];
+          if (!item || item.value === null || item.value === undefined) {
+            return `<div style="font-weight:600;margin-bottom:4px;">${item?.name || ''}</div>
+                    <div style="color:#9ca3af;font-size:12px;">Sin datos (día no transcurrido)</div>`;
+          }
           return `<div style="font-weight:600;margin-bottom:4px;">${item.name}</div>
                   <div style="display:flex;align-items:center;gap:6px;">
                     <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3b82f6;"></span>
@@ -108,6 +123,7 @@ export default function WeeklySalesChart({ salesByDay = [] }) {
           data: seriesData,
           type: 'line',
           smooth: true,
+          connectNulls: false,
           symbol: 'circle',
           symbolSize: 8,
           showSymbol: true,
