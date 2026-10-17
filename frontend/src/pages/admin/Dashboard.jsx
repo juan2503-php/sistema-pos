@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, Users, ShoppingBag, AlertTriangle } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import api from '../../services/api';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 import { useSocketEvents } from '../../hooks/useSocket';
+import WeeklySalesChart from '../../components/WeeklySalesChart';
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState(null);
@@ -121,40 +121,14 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sales Chart */}
         <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
-          <h3 className="text-lg font-medium mb-6">Ventas Últimos 7 Días</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium">Ventas Semanales</h3>
+            <span className="text-xs text-neutral-500 font-medium bg-neutral-100 dark:bg-neutral-700/50 px-2.5 py-1 rounded-md">
+              Lunes a Domingo
+            </span>
+          </div>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={metrics.salesByDay.slice().reverse()}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(val) => new Date(val).toLocaleDateString('es-MX', { weekday: 'short' })}
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `$${value}`}
-                />
-                <Tooltip
-                  formatter={(value) => [formatCurrency(value), 'Ventas']}
-                  labelFormatter={(label) => new Date(label).toLocaleDateString()}
-                  contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#3b82f6"
-                  strokeWidth={3}
-                  activeDot={{ r: 8 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <WeeklySalesChart salesByDay={metrics.salesByDay} />
           </div>
         </div>
 
