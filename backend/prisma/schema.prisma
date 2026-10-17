@@ -161,7 +161,7 @@ model Payment {
   orderId   Int
   amount    Decimal       @db.Decimal(10, 2)
   method     PaymentMethod @default(CASH)
-  voucherUrl String?      @db.VarChar(255)
+  voucherUrl String?      @db.MediumText
   createdAt  DateTime     @default(now())
 
   order Order @relation(fields: [orderId], references: [id])

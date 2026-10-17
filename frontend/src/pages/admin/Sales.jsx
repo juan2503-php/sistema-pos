@@ -126,6 +126,8 @@ export default function Sales() {
 
   // Carga una imagen y la convierte a data URL sin problemas de CORS ni canvas tainted
   const loadImageAsDataUrl = async (url) => {
+    if (!url) return null;
+    if (url.startsWith('data:image')) return url;
     try {
       const response = await fetch(url);
       if (!response.ok) throw new Error('Network error');
