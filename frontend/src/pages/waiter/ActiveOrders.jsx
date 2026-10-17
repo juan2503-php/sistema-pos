@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Receipt, CreditCard, Banknote, Landmark, Clock, CheckCircle, Edit2 } from 'lucide-react';
+import { Receipt, Banknote, Landmark, Clock, CheckCircle, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { formatCurrency, formatDate } from '../../utils/helpers';
@@ -341,18 +341,14 @@ export default function ActiveOrders() {
 
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-neutral-400">Método de Pago</label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <button type="button" onClick={() => setPaymentMethod('CASH')} className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${paymentMethod === 'CASH' ? 'border-primary bg-primary/20 text-primary' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
                       <Banknote className="w-6 h-6 mb-1" />
                       <span className="text-xs font-bold">Efectivo</span>
                     </button>
-                    <button type="button" onClick={() => setPaymentMethod('CARD')} className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${paymentMethod === 'CARD' ? 'border-primary bg-primary/20 text-primary' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
-                      <CreditCard className="w-6 h-6 mb-1" />
-                      <span className="text-xs font-bold">Tarjeta</span>
-                    </button>
                     <button type="button" onClick={() => setPaymentMethod('TRANSFER')} className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${paymentMethod === 'TRANSFER' ? 'border-primary bg-primary/20 text-primary' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
                       <Landmark className="w-6 h-6 mb-1" />
-                      <span className="text-xs font-bold">Transf.</span>
+                      <span className="text-xs font-bold">Transferencia</span>
                     </button>
                   </div>
                 </div>
